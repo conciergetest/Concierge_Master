@@ -6,7 +6,7 @@ from st_aggrid import AgGrid, GridOptionsBuilder
 from datetime import datetime, timedelta
 from io import BytesIO
 
-st.set_page_config(page_title="Concierge Master v5.3", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Concierge Master v5.1", layout="wide", initial_sidebar_state="collapsed")
 db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "recepcion_final.db")
 
 query_params = st.query_params
@@ -18,37 +18,14 @@ filtro_checkout = query_params.get("checkout_filtro")
 filtro_fecha_date = query_params.get("fecha_date")
 fecha_filtro_activo = query_params.get("fecha_activa") == "true"
 
-# ============================================================
-# Cache de datos con @st.cache_data
-# ============================================================
-@st.cache_data(ttl=30)
 def cargar_reservaciones():
     conn = sqlite3.connect(db_path)
     df = pd.read_sql_query("SELECT * FROM huespedes", conn)
     conn.close()
-    df["check_in_dt"] = pd.to_datetime(df["check_in"], format="%Y-%m-%d", errors="coerce")
+    df["check_in_dt"] = pd.to_datetime(df["check_in"], format="%b %d", errors="coerce")
     df = df.sort_values(by=["check_in_dt", "name"])
     return df.drop(columns=["check_in_dt"])
 
-# ============================================================
-# Helper para mostrar fechas en UI (formato legible)
-# ============================================================
-def fmt_fecha(fecha_str):
-    """Convierte YYYY-MM-DD → 'May 15' para mostrar en UI"""
-    if not fecha_str or pd.isna(fecha_str):
-        return ""
-    try:
-        return datetime.strptime(str(fecha_str), "%Y-%m-%d").strftime("%b %d")
-    except:
-        return str(fecha_str)
-
-def parse_fecha_input(fecha_date):
-    """Convierte datetime.date → YYYY-MM-DD para guardar en DB"""
-    return fecha_date.strftime("%Y-%m-%d")
-
-# ============================================================
-# HORAS ETA
-# ============================================================
 horas_eta_12h, horas_eta_24h = [], []
 for h in range(24):
     for m in [0, 30]:
@@ -63,9 +40,6 @@ for h in range(24):
 mapa_12a24 = dict(zip(horas_eta_12h, horas_eta_24h))
 mapa_24a12 = dict(zip(horas_eta_24h, horas_eta_12h))
 
-# ============================================================
-# EXPORTAR EXCEL POR CATEGORIAS
-# ============================================================
 def exportar_excel_por_categorias(df):
     from openpyxl import Workbook
     from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
@@ -124,8 +98,6 @@ def exportar_excel_por_categorias(df):
         for row_data in filas:
             for col_idx, col_db in enumerate(mapeo_cols.keys(), 1):
                 valor = row_data.get(col_db, "")
-                if col_db in ("check_in", "check_out"):
-                    valor = fmt_fecha(valor)
                 if pd.isna(valor): valor = ""
                 cell = ws.cell(row=current_row, column=col_idx, value=valor)
                 cell.fill, cell.font, cell.alignment, cell.border = fill_data, font_data, align_left, thin_border
@@ -140,70 +112,34 @@ def exportar_excel_por_categorias(df):
     buffer.seek(0)
     return buffer
 
-# ============================================================
-# CSS por key de boton
-# ============================================================
 st.markdown("""
 <style>
 header[data-testid="stHeader"] { display: none !important; }
 .block-container { padding-top: 0.1rem !important; padding-bottom: 0.1rem !important; }
 div[data-testid="stHorizontalBlock"] { gap: 0.2rem !important; }
 div[data-testid="stVerticalBlock"] > div { margin-bottom: 0.1rem !important; }
-div.stButton > button {
-    width: 100%; border-radius: 6px; font-weight: bold; border: none;
-    font-size: 0.65rem; padding: 4px 2px; white-space: nowrap; min-height: 28px;
-}
-button[key="btn_nueva"], button[key="btn_editar"], button[key="btn_importar"],
-button[key="btn_exportar"], button[key="btn_carta"], button[key="btn_cancelar"],
-button[key="btn_reporte"], button[key="btn_agenda"] {
-    background: #00E5FF !important; color: black !important;
-}
-button[key^="checkout_btn_"] {
-    background-color: #000000 !important; color: #ffffff !important; font-weight: bold !important;
-    font-size: 0.7rem !important; border: 1px solid #333 !important; border-radius: 6px !important;
-    text-align: center !important; padding: 2px 3px !important; min-height: 22px !important; margin: 0 !important;
-}
-button[key="btn_ver_todas"] {
-    background-color: #000000 !important; color: #ffffff !important; font-weight: bold !important;
-    font-size: 0.7rem !important; border: 1px solid #333 !important; border-radius: 6px !important;
-    text-align: center !important; padding: 2px 3px !important; min-height: 22px !important;
-}
+div.stButton > button { width: 100%; border-radius: 6px; font-weight: bold; border: none;
+    font-size: 0.65rem; padding: 4px 2px; white-space: nowrap; min-height: 28px; }
+#root > div > div > div > div > div > div[data-testid="stHorizontalBlock"]:nth-of-type(1) > div:nth-child(2) button { background: #00E5FF !important; color: black !important; }
+button[key^="checkout_btn_"] { background-color: #000000 !important; color: #ffffff !important; font-weight: bold !important; font-size: 0.7rem !important; border: 1px solid #333 !important; border-radius: 6px !important; text-align: center !important; padding: 2px 3px !important; min-height: 22px !important; margin: 0 !important; }
+button[key="btn_ver_todas"] { background-color: #000000 !important; color: #ffffff !important; font-weight: bold !important; font-size: 0.7rem !important; border: 1px solid #333 !important; border-radius: 6px !important; text-align: center !important; padding: 2px 3px !important; min-height: 22px !important; }
 div[data-testid="stHorizontalBlock"] button[key^="checkout_btn_"] { margin-top: 1px !important; margin-bottom: 1px !important; }
-div[data-testid="stTextInput"] > div > div > input {
-    background-color: #1a1a2e !important; color: white !important; border: 1px solid #333 !important;
-    border-radius: 8px !important; padding: 6px 10px !important; font-size: 0.85rem !important;
-}
+div[data-testid="stTextInput"] > div > div > input { background-color: #1a1a2e !important; color: white !important; border: 1px solid #333 !important; border-radius: 8px !important; padding: 6px 10px !important; font-size: 0.85rem !important; }
 div[data-testid="stTextInput"] label { margin-bottom: 0 !important; font-size: 0.75rem !important; }
-div[data-testid="stDateInput"] > div > div > input {
-    background-color: #1a1a2e !important; color: white !important; border: 1px solid #333 !important;
-    border-radius: 8px !important; padding: 6px 10px !important; font-size: 0.85rem !important;
-}
+div[data-testid="stDateInput"] > div > div > input { background-color: #1a1a2e !important; color: white !important; border: 1px solid #333 !important; border-radius: 8px !important; padding: 6px 10px !important; font-size: 0.85rem !important; }
 div[data-testid="stDateInput"] label { color: #888 !important; font-size: 0.75rem !important; margin-bottom: 2px !important; }
-button[key="btn_aplicar_fecha"] {
-    background-color: #00E5FF !important; color: #000000 !important; font-weight: bold !important;
-    font-size: 0.7rem !important; border: none !important; border-radius: 6px !important;
-    padding: 4px 8px !important; min-height: 28px !important;
-}
-button[key="btn_limpiar_fecha"] {
-    background-color: #333333 !important; color: #ffffff !important; font-weight: bold !important;
-    font-size: 0.7rem !important; border: 1px solid #555 !important; border-radius: 6px !important;
-    padding: 4px 8px !important; min-height: 28px !important;
-}
-button[key="btn_procesar_excel"] {
-    background-color: #00E5FF !important; color: #000000 !important; font-weight: bold !important;
-    font-size: 0.85rem !important; border: none !important; border-radius: 8px !important;
-    padding: 10px 20px !important; min-height: 40px !important;
-}
+button[key="btn_aplicar_fecha"] { background-color: #00E5FF !important; color: #000000 !important; font-weight: bold !important; font-size: 0.7rem !important; border: none !important; border-radius: 6px !important; padding: 4px 8px !important; min-height: 28px !important; }
+button[key="btn_limpiar_fecha"] { background-color: #333333 !important; color: #ffffff !important; font-weight: bold !important; font-size: 0.7rem !important; border: 1px solid #555 !important; border-radius: 6px !important; padding: 4px 8px !important; min-height: 28px !important; }
+button[key="btn_procesar_excel"] { background-color: #00E5FF !important; color: #000000 !important; font-weight: bold !important; font-size: 0.85rem !important; border: none !important; border-radius: 8px !important; padding: 10px 20px !important; min-height: 40px !important; }
 .ag-root-wrapper { background-color: #101010 !important; }
 .ag-cell { color: white !important; background-color: #101010 !important; }
 .ag-row-selected .ag-cell { background-color: #00FFFF !important; color: #000000 !important; font-weight: bold !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# ===== HEADER =====
 header_col1, header_col2 = st.columns([1.3, 8.7])
 with header_col1:
-    st.markdown("""<h2 style="color:#00E5FF; margin:0; padding:0; font-size:1.1rem; line-height:1.0;">🛎️ Concierge<br>Master v5.3</h2>""", unsafe_allow_html=True)
+    st.markdown("""<h2 style="color:#00E5FF; margin:0; padding:0; font-size:1.1rem; line-height:1.0;">🛎️ Concierge<br>Master v5.1</h2>""", unsafe_allow_html=True)
 with header_col2:
     c1, c2, c3, c4, c5, c6, c7, c8 = st.columns(8)
     if c1.button("➕ NUEVA", key="btn_nueva"): st.query_params["action"] = "nueva"; st.rerun()
@@ -215,22 +151,18 @@ with header_col2:
     if c7.button("📄 REPORTE", key="btn_reporte"): st.query_params["action"] = "reporte"; st.rerun()
     if c8.button("📅 AGENDA", key="btn_agenda"): st.switch_page("pages/agenda.py")
 
-# ===== CARGAR DATOS (con cache) =====
 df_todas = cargar_reservaciones()
 total_reservas = len(df_todas)
 
-# ===== FILA 1: CONTADOR + BUSCADOR =====
 search_col1, search_col2 = st.columns([2.5, 8.5])
 with search_col1:
     st.markdown(f"""<div style="background-color: #1a1a2e; border-radius: 8px; padding: 6px 10px; margin-bottom: 4px; text-align: center; border: 1px solid #00E5FF;">
         <span style="color: #00E5FF; font-size: 0.75rem; font-weight: bold;">📊 TOTAL RESERVAS:</span>
         <span style="color: #ffffff; font-size: 1.0rem; font-weight: bold;"> {total_reservas}</span></div>""", unsafe_allow_html=True)
     st.markdown("<p style='color:#888; font-size:0.75rem; margin:0; padding:0;'>🔍 Búsqueda rápida...</p>", unsafe_allow_html=True)
-    # FIX 1: Label no vacio para evitar warning
-    busqueda = st.text_input("Buscar", placeholder="Buscar por nombre, telefono, reserva, VIP, Relaxury...", label_visibility="collapsed", key="buscador_global")
+    busqueda = st.text_input("", placeholder="Buscar por nombre, teléfono, reserva, VIP, Relaxury...", label_visibility="collapsed", key="buscador_global")
 with search_col2: pass
 
-# ===== FILA 2: CHECKOUT + GRAFICO =====
 left_col, right_col = st.columns([5.0, 5.0])
 with left_col:
     st.markdown("""<div style="background-color: #1a1a2e; border-radius: 8px; padding: 5px 8px 2px 8px; margin-bottom: 1px;">
@@ -242,8 +174,7 @@ with left_col:
         for j in range(2):
             if i + j < len(fechas_checkout):
                 fecha = fechas_checkout[i + j]
-                mes_abr, dia_num = fecha.strftime("%b").upper(), fecha.strftime("%d")
-                fecha_db = fecha.strftime("%Y-%m-%d")
+                mes_abr, dia_num, fecha_db = fecha.strftime("%b").upper(), fecha.strftime("%d"), fecha.strftime("%b %d")
                 count = len(df_todas[df_todas["check_out"] == fecha_db])
                 with cols[j]:
                     if st.button(f"{dia_num}-{mes_abr}: [{count}]", key=f"checkout_btn_{fecha_db}", use_container_width=True):
@@ -288,30 +219,28 @@ with right_col:
     conteo_categorias["LEISURE"] = max(0, total_reservas - total_categorizadas)
     conteo_ordenado = dict(sorted(conteo_categorias.items(), key=lambda x: x[1], reverse=True))
     max_valor = max(conteo_ordenado.values()) if conteo_ordenado else 1
-
-    # FIX 2: Usar streamlit.components.v1.html en lugar de st.html
-    html_chart = """<div style="background-color:#0d0d0d;border-radius:12px;padding:12px 15px;min-height:220px;color:white;font-family:'Segoe UI',sans-serif;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <div style="color:#888;font-size:10px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;">Guest Categories</div>
-        <div style="width:42px;height:42px;border:2px solid #00E5FF;border-radius:50%;display:flex;align-items:center;justify-content:center;">
-            <div style="color:#00E5FF;font-size:14px;font-weight:bold;">""" + str(total_reservas) + """</div>
-        </div>
-    </div>"""
+    html_chart = """<!DOCTYPE html><html><head><style>
+    *{margin:0;padding:0;box-sizing:border-box}body{background-color:#0d0d0d;font-family:'Segoe UI',sans-serif}
+    .chart-container{background-color:#0d0d0d;border-radius:12px;padding:12px 15px;min-height:220px;color:white}
+    .chart-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .chart-title{color:#888;font-size:10px;font-weight:bold;letter-spacing:1px;text-transform:uppercase}
+    .total-circle{width:42px;height:42px;border:2px solid #00E5FF;border-radius:50%;display:flex;align-items:center;justify-content:center}
+    .total-number{color:#00E5FF;font-size:14px;font-weight:bold}
+    .bar-row{display:flex;align-items:center;margin-bottom:5px}
+    .bar-label{width:90px;color:#ccc;font-size:9px;text-align:right;padding-right:8px;white-space:nowrap}
+    .bar-track{flex:1;background-color:#1a1a1a;border-radius:3px;height:16px;position:relative;overflow:hidden}
+    .bar-fill{height:100%;border-radius:3px;transition:width 0.5s ease}
+    .bar-value{width:28px;color:#fff;font-size:11px;font-weight:bold;text-align:right;padding-left:8px}
+    </style></head><body><div class="chart-container"><div class="chart-header">
+    <div class="chart-title">Guest Categories</div><div class="total-circle"><div class="total-number">""" + str(total_reservas) + """</div></div></div>"""
     for cat, valor in conteo_ordenado.items():
         color = categorias.get(cat, "#888")
         porcentaje = (valor / max_valor * 100) if max_valor > 0 else 0
-        html_chart += f"""<div style="display:flex;align-items:center;margin-bottom:5px;">
-            <div style="width:90px;color:#ccc;font-size:9px;text-align:right;padding-right:8px;white-space:nowrap;">{cat}</div>
-            <div style="flex:1;background-color:#1a1a1a;border-radius:3px;height:16px;position:relative;overflow:hidden;">
-                <div style="height:100%;border-radius:3px;width:{porcentaje}%;background-color:{color};"></div>
-            </div>
-            <div style="width:28px;color:#fff;font-size:11px;font-weight:bold;text-align:right;padding-left:8px;">{valor}</div>
-        </div>"""
-    html_chart += "</div>"
-
-    import streamlit.components.v1 as components
-    components.html(html_chart, height=280, scrolling=False)
-
+        html_chart += f"""<div class="bar-row"><div class="bar-label">{cat}</div><div class="bar-track">
+        <div class="bar-fill" style="width:{porcentaje}%;background-color:{color};"></div></div><div class="bar-value">{valor}</div></div>"""
+    html_chart += """</div></body></html>"""
+    # CORRECCIÓN 1: Usar st.html en lugar de components.v1.html (deprecado)
+    st.html(html_chart)
     mask_relaxury = df_todas.astype(str).apply(lambda row: row.str.upper().str.contains("RELAXURY", na=False).any(), axis=1)
     total_relaxury = mask_relaxury.sum()
     st.markdown(f"""<div style="background-color: #1a1a2e; border-radius: 8px; padding: 6px 10px; margin-top: 2px; text-align: center; border: 1px solid #E91E63;">
@@ -319,7 +248,7 @@ with right_col:
         <span style="color: #ffffff; font-size: 1.0rem; font-weight: bold;"> {total_relaxury}</span></div>""", unsafe_allow_html=True)
 
 # ============================================================
-# FORMULARIO IMPORTAR
+# FORMULARIO IMPORTAR DESDE EXCEL
 # ============================================================
 if mostrar_importar:
     with st.container():
@@ -330,8 +259,7 @@ if mostrar_importar:
                 st.query_params.clear(); st.rerun()
         st.markdown("""<div style="background-color: #1a1a2e; border-radius: 8px; padding: 15px; margin: 10px 0; border: 1px solid #333;">
             <p style="color: #ccc; font-size: 0.85rem; margin: 0;">📋 <b>Instrucciones:</b> Selecciona tu archivo <code>Plantilla_Importar.xlsx</code>. 
-            El archivo debe contener las columnas: <b>eta, name, qty, room, email, check_in, check_out, res_number, phone, info, ird, hsk, rate, trans</b><br><br>
-            <b>⚠️ IMPORTANTE:</b> Las fechas deben estar en formato <b>YYYY-MM-DD</b> (ej: 2026-07-15) o formato Excel estándar.</p></div>""", unsafe_allow_html=True)
+            El archivo debe contener las columnas: <b>eta, name, qty, room, email, check_in, check_out, res_number, phone, info, ird, hsk, rate, trans</b></p></div>""", unsafe_allow_html=True)
         archivo_subido = st.file_uploader("📁 Seleccionar archivo Excel", type=["xlsx", "xls"], key="uploader_excel")
         if archivo_subido is not None:
             try:
@@ -349,11 +277,9 @@ if mostrar_importar:
                     df_preview = df_excel[columnas_esperadas].copy()
                     for col in ["check_in", "check_out"]:
                         if col in df_preview.columns:
-                            try:
-                                df_preview[col] = pd.to_datetime(df_preview[col], errors="coerce").dt.strftime("%Y-%m-%d")
+                            try: df_preview[col] = pd.to_datetime(df_preview[col], errors="coerce").dt.strftime("%b %d")
                             except: pass
-                    # FIX 3: Reemplazar use_container_width por width
-                    st.dataframe(df_preview, width="stretch", height=250)
+                    st.dataframe(df_preview, use_container_width=True, height=250)
                     col_proc, _ = st.columns([1, 3])
                     with col_proc:
                         if st.button("📥 IMPORTAR A BASE DE DATOS", key="btn_procesar_excel", use_container_width=True):
@@ -370,11 +296,11 @@ if mostrar_importar:
                                         email = str(row.get("email", "")).strip()
                                         check_in_raw, check_out_raw = row.get("check_in", ""), row.get("check_out", "")
                                         if pd.notna(check_in_raw):
-                                            try: check_in = pd.to_datetime(check_in_raw).strftime("%Y-%m-%d")
+                                            try: check_in = pd.to_datetime(check_in_raw).strftime("%b %d")
                                             except: check_in = str(check_in_raw).strip()
                                         else: check_in = ""
                                         if pd.notna(check_out_raw):
-                                            try: check_out = pd.to_datetime(check_out_raw).strftime("%Y-%m-%d")
+                                            try: check_out = pd.to_datetime(check_out_raw).strftime("%b %d")
                                             except: check_out = str(check_out_raw).strip()
                                         else: check_out = ""
                                         res_number = str(row.get("res_number", "")).strip()
@@ -392,7 +318,6 @@ if mostrar_importar:
                                         registros_error += 1
                                         errores_detalle.append(f"Fila {idx + 2}: {str(e)}")
                                 conn.commit(); conn.close()
-                                cargar_reservaciones.clear()
                                 st.markdown(f"""<div style="background-color: #0d1f0d; border-radius: 8px; padding: 15px; margin: 15px 0; border: 1px solid #2e7d32;">
                                     <h4 style="color: #4CAF50; margin: 0 0 10px 0;">✅ Importación Completada</h4>
                                     <p style="color: #ccc; font-size: 0.9rem; margin: 0;">📥 Registros insertados: <b style="color: #4CAF50;">{registros_insertados}</b><br>
@@ -410,7 +335,7 @@ if mostrar_importar:
             except Exception as e: st.error(f"❌ Error al leer el archivo: {str(e)}")
 
 # ============================================================
-# FORMULARIO EXPORTAR
+# FORMULARIO EXPORTAR A EXCEL
 # ============================================================
 if mostrar_exportar:
     with st.container():
@@ -424,7 +349,8 @@ if mostrar_exportar:
         if filtro_checkout:
             df_export = df_export[df_export["check_out"] == filtro_checkout]; filtro_activo = True
         if fecha_filtro_activo and filtro_fecha_date:
-            df_export = df_export[df_export["check_in"] == filtro_fecha_date]; filtro_activo = True
+            fecha_filtro = datetime.strptime(filtro_fecha_date, "%Y-%m-%d").strftime("%b %d")
+            df_export = df_export[df_export["check_in"] == fecha_filtro]; filtro_activo = True
         if busqueda and busqueda.strip():
             busqueda_lower = busqueda.strip().lower()
             mask = df_export.astype(str).apply(lambda row: row.str.lower().str.contains(busqueda_lower, na=False).any(), axis=1)
@@ -435,12 +361,8 @@ if mostrar_exportar:
             • Total de reservas a exportar: <b style="color: #00E5FF;">{total_a_exportar}</b><br>
             • Filtro activo: <b style="color: #00E5FF;">{"Sí" if filtro_activo else "No"}</b><br>
             • El archivo se organizará por categorías: <b>CUMPLEAÑOS, VIP, HONEYMOON, ANNIVERSARY, BABYMOON, TEAM MEMBER, GENERAL</b></p></div>""", unsafe_allow_html=True)
-        df_preview = df_export.copy()
-        df_preview["check_in"] = df_preview["check_in"].apply(fmt_fecha)
-        df_preview["check_out"] = df_preview["check_out"].apply(fmt_fecha)
         st.markdown("<p style='color:#888; font-size:0.8rem; margin-top:15px;'>👁️ Vista previa del contenido a exportar:</p>", unsafe_allow_html=True)
-        # FIX 3: Reemplazar use_container_width por width
-        st.dataframe(df_preview, width="stretch", height=300)
+        st.dataframe(df_export, use_container_width=True, height=300)
         if total_a_exportar > 0:
             try:
                 excel_buffer = exportar_excel_por_categorias(df_export)
@@ -455,7 +377,7 @@ if mostrar_exportar:
         else: st.warning("⚠️ No hay datos para exportar con los filtros actuales.")
 
 # ============================================================
-# FORMULARIO REPORTE DE OCUPACION
+# FORMULARIO REPORTE DE OCUPACIÓN DIARIO
 # ============================================================
 if st.query_params.get("action") == "reporte":
     with st.container():
@@ -465,12 +387,24 @@ if st.query_params.get("action") == "reporte":
             if st.button("↩️ REGRESAR", key="regresar_reporte"):
                 st.query_params.clear(); st.rerun()
         hoy = datetime.now()
-        hoy_str_db = hoy.strftime("%Y-%m-%d")
-        hoy_str_fmt = fmt_fecha(hoy_str_db)
+        hoy_str = hoy.strftime("%b %d")
         manana = hoy + timedelta(days=1)
-        manana_str_db = manana.strftime("%Y-%m-%d")
-        manana_str_fmt = fmt_fecha(manana_str_db)
+        manana_str = manana.strftime("%b %d")
         df_todas = cargar_reservaciones()
+
+        def fecha_es_menor_igual(fecha_str, referencia_str):
+            try:
+                fecha = datetime.strptime(fecha_str, "%b %d").replace(year=hoy.year)
+                referencia = datetime.strptime(referencia_str, "%b %d").replace(year=hoy.year)
+                return fecha <= referencia
+            except: return False
+
+        def fecha_es_mayor(fecha_str, referencia_str):
+            try:
+                fecha = datetime.strptime(fecha_str, "%b %d").replace(year=hoy.year)
+                referencia = datetime.strptime(referencia_str, "%b %d").replace(year=hoy.year)
+                return fecha > referencia
+            except: return False
 
         def obtener_rooms(df):
             rooms = df["room"].dropna().astype(str)
@@ -481,38 +415,44 @@ if st.query_params.get("action") == "reporte":
             if len(rooms_list) <= 5: return ", ".join(rooms_list)
             return ", ".join(rooms_list[:5]) + f" (+{len(rooms_list) - 5} más)"
 
-        df_en_casa = df_todas[(df_todas["check_in"] <= hoy_str_db) & (df_todas["check_out"] > hoy_str_db)]
+        mask_en_casa = df_todas.apply(lambda row: fecha_es_menor_igual(row["check_in"], hoy_str) and fecha_es_mayor(row["check_out"], hoy_str), axis=1)
+        df_en_casa = df_todas[mask_en_casa]
         total_en_casa = len(df_en_casa)
         rooms_en_casa = obtener_rooms(df_en_casa)
-        vip_en_casa = df_en_casa[df_en_casa["info"].astype(str).str.upper().str.contains("VIP", na=False)]
+        mask_vip_en_casa = df_en_casa["info"].astype(str).str.upper().str.contains("VIP", na=False)
+        vip_en_casa = df_en_casa[mask_vip_en_casa]
         total_vip_en_casa = len(vip_en_casa)
         rooms_vip_en_casa = obtener_rooms(vip_en_casa)
 
-        df_salen_hoy = df_todas[df_todas["check_out"] == hoy_str_db]
+        df_salen_hoy = df_todas[df_todas["check_out"] == hoy_str]
         total_salen_hoy = len(df_salen_hoy)
         rooms_salen_hoy = obtener_rooms(df_salen_hoy)
-        vip_salen_hoy = df_salen_hoy[df_salen_hoy["info"].astype(str).str.upper().str.contains("VIP", na=False)]
+        mask_vip_salen_hoy = df_salen_hoy["info"].astype(str).str.upper().str.contains("VIP", na=False)
+        vip_salen_hoy = df_salen_hoy[mask_vip_salen_hoy]
         total_vip_salen_hoy = len(vip_salen_hoy)
         rooms_vip_salen_hoy = obtener_rooms(vip_salen_hoy)
 
-        df_salen_manana = df_todas[df_todas["check_out"] == manana_str_db]
+        df_salen_manana = df_todas[df_todas["check_out"] == manana_str]
         total_salen_manana = len(df_salen_manana)
         rooms_salen_manana = obtener_rooms(df_salen_manana)
-        vip_salen_manana = df_salen_manana[df_salen_manana["info"].astype(str).str.upper().str.contains("VIP", na=False)]
+        mask_vip_salen_manana = df_salen_manana["info"].astype(str).str.upper().str.contains("VIP", na=False)
+        vip_salen_manana = df_salen_manana[mask_vip_salen_manana]
         total_vip_salen_manana = len(vip_salen_manana)
         rooms_vip_salen_manana = obtener_rooms(vip_salen_manana)
 
-        df_llegan_hoy = df_todas[df_todas["check_in"] == hoy_str_db]
+        df_llegan_hoy = df_todas[df_todas["check_in"] == hoy_str]
         total_llegan_hoy = len(df_llegan_hoy)
         rooms_llegan_hoy = obtener_rooms(df_llegan_hoy)
-        vip_llegan_hoy = df_llegan_hoy[df_llegan_hoy["info"].astype(str).str.upper().str.contains("VIP", na=False)]
+        mask_vip_llegan_hoy = df_llegan_hoy["info"].astype(str).str.upper().str.contains("VIP", na=False)
+        vip_llegan_hoy = df_llegan_hoy[mask_vip_llegan_hoy]
         total_vip_llegan_hoy = len(vip_llegan_hoy)
         rooms_vip_llegan_hoy = obtener_rooms(vip_llegan_hoy)
 
-        df_llegan_manana = df_todas[df_todas["check_in"] == manana_str_db]
+        df_llegan_manana = df_todas[df_todas["check_in"] == manana_str]
         total_llegan_manana = len(df_llegan_manana)
         rooms_llegan_manana = obtener_rooms(df_llegan_manana)
-        vip_llegan_manana = df_llegan_manana[df_llegan_manana["info"].astype(str).str.upper().str.contains("VIP", na=False)]
+        mask_vip_llegan_manana = df_llegan_manana["info"].astype(str).str.upper().str.contains("VIP", na=False)
+        vip_llegan_manana = df_llegan_manana[mask_vip_llegan_manana]
         total_vip_llegan_manana = len(vip_llegan_manana)
         rooms_vip_llegan_manana = obtener_rooms(vip_llegan_manana)
 
@@ -539,22 +479,22 @@ if st.query_params.get("action") == "reporte":
         st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
         col_m4, col_m5, col_m6 = st.columns(3)
         with col_m4: st.markdown(f"""<div style="background-color: #1a0d0d; border-radius: 8px; padding: 12px; text-align: center; border: 1px solid #7d2e2e;">
-            <div style="color: #f44336; font-size: 0.75rem; font-weight: bold;">🚪 SALEN HOY ({hoy_str_fmt})</div>
+            <div style="color: #f44336; font-size: 0.75rem; font-weight: bold;">🚪 SALEN HOY ({hoy_str})</div>
             <div style="color: #fff; font-size: 1.8rem; font-weight: bold;">{total_salen_hoy}</div>
             <div style="color: #888; font-size: 0.65rem; margin-top: 4px;">👑 VIPs: {total_vip_salen_hoy} | 🚪 {formatear_rooms(rooms_salen_hoy)}</div></div>""", unsafe_allow_html=True)
         with col_m5: st.markdown(f"""<div style="background-color: #1a0d0d; border-radius: 8px; padding: 12px; text-align: center; border: 1px solid #7d2e2e;">
-            <div style="color: #f44336; font-size: 0.75rem; font-weight: bold;">🚪 SALEN MAÑANA ({manana_str_fmt})</div>
+            <div style="color: #f44336; font-size: 0.75rem; font-weight: bold;">🚪 SALEN MAÑANA ({manana_str})</div>
             <div style="color: #fff; font-size: 1.8rem; font-weight: bold;">{total_salen_manana}</div>
             <div style="color: #888; font-size: 0.65rem; margin-top: 4px;">👑 VIPs: {total_vip_salen_manana} | 🚪 {formatear_rooms(rooms_salen_manana)}</div></div>""", unsafe_allow_html=True)
         with col_m6: st.markdown(f"""<div style="background-color: #0d0d1a; border-radius: 8px; padding: 12px; text-align: center; border: 1px solid #2e2e7d;">
-            <div style="color: #2196F3; font-size: 0.75rem; font-weight: bold;">📥 LLEGAN HOY ({hoy_str_fmt})</div>
+            <div style="color: #2196F3; font-size: 0.75rem; font-weight: bold;">📥 LLEGAN HOY ({hoy_str})</div>
             <div style="color: #fff; font-size: 1.8rem; font-weight: bold;">{total_llegan_hoy}</div>
             <div style="color: #888; font-size: 0.65rem; margin-top: 4px;">👑 VIPs: {total_vip_llegan_hoy} | 🚪 {formatear_rooms(rooms_llegan_hoy)}</div></div>""", unsafe_allow_html=True)
 
         st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
         col_m7, col_m8, col_m9 = st.columns(3)
         with col_m7: st.markdown(f"""<div style="background-color: #0d0d1a; border-radius: 8px; padding: 12px; text-align: center; border: 1px solid #2e2e7d;">
-            <div style="color: #2196F3; font-size: 0.75rem; font-weight: bold;">📥 LLEGAN MAÑANA ({manana_str_fmt})</div>
+            <div style="color: #2196F3; font-size: 0.75rem; font-weight: bold;">📥 LLEGAN MAÑANA ({manana_str})</div>
             <div style="color: #fff; font-size: 1.8rem; font-weight: bold;">{total_llegan_manana}</div>
             <div style="color: #888; font-size: 0.65rem; margin-top: 4px;">👑 VIPs: {total_vip_llegan_manana} | 🚪 {formatear_rooms(rooms_llegan_manana)}</div></div>""", unsafe_allow_html=True)
         with col_m8: st.markdown(f"""<div style="background-color: #1a1a0d; border-radius: 8px; padding: 12px; text-align: center; border: 1px solid #7d7d2e;">
@@ -574,18 +514,17 @@ if st.query_params.get("action") == "reporte":
         resumen_rooms_data = []
         if rooms_en_casa: resumen_rooms_data.append({"Categoría": "🏨 En Casa", "Total": total_en_casa, "Habitaciones": ", ".join(rooms_en_casa)})
         if rooms_vip_en_casa: resumen_rooms_data.append({"Categoría": "👑 VIPs En Casa", "Total": total_vip_en_casa, "Habitaciones": ", ".join(rooms_vip_en_casa)})
-        if rooms_salen_hoy: resumen_rooms_data.append({"Categoría": f"🚪 Salen Hoy ({hoy_str_fmt})", "Total": total_salen_hoy, "Habitaciones": ", ".join(rooms_salen_hoy)})
-        if rooms_vip_salen_hoy: resumen_rooms_data.append({"Categoría": f"👑 VIPs Salen Hoy ({hoy_str_fmt})", "Total": total_vip_salen_hoy, "Habitaciones": ", ".join(rooms_vip_salen_hoy)})
-        if rooms_salen_manana: resumen_rooms_data.append({"Categoría": f"🚪 Salen Mañana ({manana_str_fmt})", "Total": total_salen_manana, "Habitaciones": ", ".join(rooms_salen_manana)})
-        if rooms_vip_salen_manana: resumen_rooms_data.append({"Categoría": f"👑 VIPs Salen Mañana ({manana_str_fmt})", "Total": total_vip_salen_manana, "Habitaciones": ", ".join(rooms_vip_salen_manana)})
-        if rooms_llegan_hoy: resumen_rooms_data.append({"Categoría": f"📥 Llegan Hoy ({hoy_str_fmt})", "Total": total_llegan_hoy, "Habitaciones": ", ".join(rooms_llegan_hoy)})
-        if rooms_vip_llegan_hoy: resumen_rooms_data.append({"Categoría": f"👑 VIPs Llegan Hoy ({hoy_str_fmt})", "Total": total_vip_llegan_hoy, "Habitaciones": ", ".join(rooms_vip_llegan_hoy)})
-        if rooms_llegan_manana: resumen_rooms_data.append({"Categoría": f"📥 Llegan Mañana ({manana_str_fmt})", "Total": total_llegan_manana, "Habitaciones": ", ".join(rooms_llegan_manana)})
-        if rooms_vip_llegan_manana: resumen_rooms_data.append({"Categoría": f"👑 VIPs Llegan Mañana ({manana_str_fmt})", "Total": total_vip_llegan_manana, "Habitaciones": ", ".join(rooms_vip_llegan_manana)})
+        if rooms_salen_hoy: resumen_rooms_data.append({"Categoría": f"🚪 Salen Hoy ({hoy_str})", "Total": total_salen_hoy, "Habitaciones": ", ".join(rooms_salen_hoy)})
+        if rooms_vip_salen_hoy: resumen_rooms_data.append({"Categoría": f"👑 VIPs Salen Hoy ({hoy_str})", "Total": total_vip_salen_hoy, "Habitaciones": ", ".join(rooms_vip_salen_hoy)})
+        if rooms_salen_manana: resumen_rooms_data.append({"Categoría": f"🚪 Salen Mañana ({manana_str})", "Total": total_salen_manana, "Habitaciones": ", ".join(rooms_salen_manana)})
+        if rooms_vip_salen_manana: resumen_rooms_data.append({"Categoría": f"👑 VIPs Salen Mañana ({manana_str})", "Total": total_vip_salen_manana, "Habitaciones": ", ".join(rooms_vip_salen_manana)})
+        if rooms_llegan_hoy: resumen_rooms_data.append({"Categoría": f"📥 Llegan Hoy ({hoy_str})", "Total": total_llegan_hoy, "Habitaciones": ", ".join(rooms_llegan_hoy)})
+        if rooms_vip_llegan_hoy: resumen_rooms_data.append({"Categoría": f"👑 VIPs Llegan Hoy ({hoy_str})", "Total": total_vip_llegan_hoy, "Habitaciones": ", ".join(rooms_vip_llegan_hoy)})
+        if rooms_llegan_manana: resumen_rooms_data.append({"Categoría": f"📥 Llegan Mañana ({manana_str})", "Total": total_llegan_manana, "Habitaciones": ", ".join(rooms_llegan_manana)})
+        if rooms_vip_llegan_manana: resumen_rooms_data.append({"Categoría": f"👑 VIPs Llegan Mañana ({manana_str})", "Total": total_vip_llegan_manana, "Habitaciones": ", ".join(rooms_vip_llegan_manana)})
         if resumen_rooms_data:
             df_resumen_rooms = pd.DataFrame(resumen_rooms_data)
-            # FIX 3: Reemplazar use_container_width por width
-            st.dataframe(df_resumen_rooms, width="stretch", hide_index=True)
+            st.dataframe(df_resumen_rooms, use_container_width=True, hide_index=True)
         else: st.info("📭 No hay habitaciones para mostrar en el resumen.")
 
         def generar_reporte_excel():
@@ -609,7 +548,7 @@ if st.query_params.get("action") == "reporte":
             align_left = Alignment(horizontal="left", vertical="center", wrap_text=True)
             thin_border = Border(left=Side(style="thin", color="D9D9D9"), right=Side(style="thin", color="D9D9D9"),
                                  top=Side(style="thin", color="D9D9D9"), bottom=Side(style="thin", color="D9D9D9"))
-
+            # HOJA 1: RESUMEN
             ws_resumen = wb.active
             ws_resumen.title = "Resumen Ejecutivo"
             ws_resumen.merge_cells("A1:E1")
@@ -628,10 +567,10 @@ if st.query_params.get("action") == "reporte":
                 cell.fill, cell.font, cell.alignment, cell.border = fill_header, font_header, align_center, thin_border
             metricas_data = [
                 ("🏨 EN CASA", total_en_casa, total_vip_en_casa, ", ".join(rooms_en_casa) if rooms_en_casa else "N/A", ""),
-                ("🚪 SALEN HOY", total_salen_hoy, total_vip_salen_hoy, ", ".join(rooms_salen_hoy) if rooms_salen_hoy else "N/A", hoy_str_fmt),
-                ("🚪 SALEN MAÑANA", total_salen_manana, total_vip_salen_manana, ", ".join(rooms_salen_manana) if rooms_salen_manana else "N/A", manana_str_fmt),
-                ("📥 LLEGAN HOY", total_llegan_hoy, total_vip_llegan_hoy, ", ".join(rooms_llegan_hoy) if rooms_llegan_hoy else "N/A", hoy_str_fmt),
-                ("📥 LLEGAN MAÑANA", total_llegan_manana, total_vip_llegan_manana, ", ".join(rooms_llegan_manana) if rooms_llegan_manana else "N/A", manana_str_fmt),
+                ("🚪 SALEN HOY", total_salen_hoy, total_vip_salen_hoy, ", ".join(rooms_salen_hoy) if rooms_salen_hoy else "N/A", hoy_str),
+                ("🚪 SALEN MAÑANA", total_salen_manana, total_vip_salen_manana, ", ".join(rooms_salen_manana) if rooms_salen_manana else "N/A", manana_str),
+                ("📥 LLEGAN HOY", total_llegan_hoy, total_vip_llegan_hoy, ", ".join(rooms_llegan_hoy) if rooms_llegan_hoy else "N/A", hoy_str),
+                ("📥 LLEGAN MAÑANA", total_llegan_manana, total_vip_llegan_manana, ", ".join(rooms_llegan_manana) if rooms_llegan_manana else "N/A", manana_str),
                 ("📊 TOTAL DB", total_reservas, "-", "-", "Todas las reservas"),
                 ("📈 % OCUPACIÓN", f"{ocupacion_pct}%", "-", "-", f"{total_en_casa} de {total_reservas}"),
             ]
@@ -639,7 +578,8 @@ if st.query_params.get("action") == "reporte":
                 row = 5 + i
                 for col_idx, val in enumerate([label, total, vips, rooms, notas], 1):
                     cell = ws_resumen.cell(row=row, column=col_idx, value=val)
-                    cell.fill = fill_gris; cell.border = thin_border
+                    cell.fill = fill_gris
+                    cell.border = thin_border
                     if col_idx == 1: cell.font, cell.alignment = font_label, align_left
                     elif col_idx == 2: cell.font, cell.alignment = font_metrica, align_center
                     elif col_idx == 3: cell.font, cell.alignment = font_label, align_center
@@ -651,7 +591,7 @@ if st.query_params.get("action") == "reporte":
             ws_resumen.column_dimensions["D"].width = 45
             ws_resumen.column_dimensions["E"].width = 25
 
-            def agregar_hoja(wb, titulo, nombre_hoja, fill_color, df_data):
+            def crear_hoja(wb, titulo, nombre_hoja, fill_color, df_data):
                 ws = wb.create_sheet(nombre_hoja)
                 ws.merge_cells("A1:O1")
                 cell = ws["A1"]
@@ -667,8 +607,6 @@ if st.query_params.get("action") == "reporte":
                     valores = [row_data.get(c, "") for c in ["id", "eta", "name", "qty", "room", "email", "check_in", "check_out",
                                                                "res_number", "phone", "info", "ird", "hsk", "rate", "trans"]]
                     for col_idx, valor in enumerate(valores, 1):
-                        if col_idx in (7, 8):
-                            valor = fmt_fecha(valor)
                         cell = ws.cell(row=row_idx, column=col_idx, value=valor if pd.notna(valor) else "")
                         cell.fill, cell.font, cell.alignment, cell.border = fill_gris, font_label, align_left, thin_border
                 anchos = {"A": 6, "B": 10, "C": 22, "D": 6, "E": 8, "F": 25, "G": 10, "H": 10,
@@ -676,17 +614,17 @@ if st.query_params.get("action") == "reporte":
                 for col_letter, ancho in anchos.items(): ws.column_dimensions[col_letter].width = ancho
                 return ws
 
-            agregar_hoja(wb, f"HABITACIONES EN CASA - {hoy_str_fmt}", "En Casa", fill_verde, df_en_casa)
-            agregar_hoja(wb, f"HABITACIONES QUE SALEN HOY - {hoy_str_fmt}", f"Salen Hoy {hoy_str_fmt}", fill_rojo, df_salen_hoy)
-            agregar_hoja(wb, f"HABITACIONES QUE SALEN MAÑANA - {manana_str_fmt}", f"Salen Mañana {manana_str_fmt}", fill_rojo, df_salen_manana)
-            agregar_hoja(wb, f"HABITACIONES QUE LLEGAN HOY - {hoy_str_fmt}", f"Llegan Hoy {hoy_str_fmt}", fill_azul, df_llegan_hoy)
-            agregar_hoja(wb, f"HABITACIONES QUE LLEGAN MAÑANA - {manana_str_fmt}", f"Llegan Mañana {manana_str_fmt}", fill_azul, df_llegan_manana)
-            if total_vip_en_casa > 0: agregar_hoja(wb, f"VIPs EN CASA - {hoy_str_fmt}", "VIPs En Casa", fill_verde, vip_en_casa)
-
+            crear_hoja(wb, f"HABITACIONES EN CASA - {hoy_str}", "En Casa", fill_verde, df_en_casa)
+            crear_hoja(wb, f"HABITACIONES QUE SALEN HOY - {hoy_str}", f"Salen Hoy {hoy_str}", fill_rojo, df_salen_hoy)
+            crear_hoja(wb, f"HABITACIONES QUE SALEN MAÑANA - {manana_str}", f"Salen Mañana {manana_str}", fill_rojo, df_salen_manana)
+            crear_hoja(wb, f"HABITACIONES QUE LLEGAN HOY - {hoy_str}", f"Llegan Hoy {hoy_str}", fill_azul, df_llegan_hoy)
+            crear_hoja(wb, f"HABITACIONES QUE LLEGAN MAÑANA - {manana_str}", f"Llegan Mañana {manana_str}", fill_azul, df_llegan_manana)
+            if total_vip_en_casa > 0: crear_hoja(wb, f"VIPs EN CASA - {hoy_str}", "VIPs En Casa", fill_verde, vip_en_casa)
+            # HOJA RESUMEN ROOMS
             ws_rooms = wb.create_sheet("Resumen Rooms")
             ws_rooms.merge_cells("A1:D1")
             cell = ws_rooms["A1"]
-            cell.value = f"RESUMEN DE HABITACIONES - {hoy_str_fmt}"
+            cell.value = f"RESUMEN DE HABITACIONES - {hoy_str}"
             cell.fill, cell.font, cell.alignment = fill_morado, font_titulo, align_center
             ws_rooms.row_dimensions[1].height = 25
             headers_rooms = ["CATEGORÍA", "TOTAL", "HABITACIONES", "FECHA"]
@@ -694,16 +632,16 @@ if st.query_params.get("action") == "reporte":
                 cell = ws_rooms.cell(row=2, column=col_idx, value=header)
                 cell.fill, cell.font, cell.alignment, cell.border = fill_header, font_header, align_center, thin_border
             rooms_data_excel = [
-                ("En Casa", total_en_casa, ", ".join(rooms_en_casa) if rooms_en_casa else "N/A", hoy_str_fmt),
-                ("VIPs En Casa", total_vip_en_casa, ", ".join(rooms_vip_en_casa) if rooms_vip_en_casa else "N/A", hoy_str_fmt),
-                ("Salen Hoy", total_salen_hoy, ", ".join(rooms_salen_hoy) if rooms_salen_hoy else "N/A", hoy_str_fmt),
-                ("VIPs Salen Hoy", total_vip_salen_hoy, ", ".join(rooms_vip_salen_hoy) if rooms_vip_salen_hoy else "N/A", hoy_str_fmt),
-                ("Salen Mañana", total_salen_manana, ", ".join(rooms_salen_manana) if rooms_salen_manana else "N/A", manana_str_fmt),
-                ("VIPs Salen Mañana", total_vip_salen_manana, ", ".join(rooms_vip_salen_manana) if rooms_vip_salen_manana else "N/A", manana_str_fmt),
-                ("Llegan Hoy", total_llegan_hoy, ", ".join(rooms_llegan_hoy) if rooms_llegan_hoy else "N/A", hoy_str_fmt),
-                ("VIPs Llegan Hoy", total_vip_llegan_hoy, ", ".join(rooms_vip_llegan_hoy) if rooms_vip_llegan_hoy else "N/A", hoy_str_fmt),
-                ("Llegan Mañana", total_llegan_manana, ", ".join(rooms_llegan_manana) if rooms_llegan_manana else "N/A", manana_str_fmt),
-                ("VIPs Llegan Mañana", total_vip_llegan_manana, ", ".join(rooms_vip_llegan_manana) if rooms_vip_llegan_manana else "N/A", manana_str_fmt),
+                ("En Casa", total_en_casa, ", ".join(rooms_en_casa) if rooms_en_casa else "N/A", hoy_str),
+                ("VIPs En Casa", total_vip_en_casa, ", ".join(rooms_vip_en_casa) if rooms_vip_en_casa else "N/A", hoy_str),
+                ("Salen Hoy", total_salen_hoy, ", ".join(rooms_salen_hoy) if rooms_salen_hoy else "N/A", hoy_str),
+                ("VIPs Salen Hoy", total_vip_salen_hoy, ", ".join(rooms_vip_salen_hoy) if rooms_vip_salen_hoy else "N/A", hoy_str),
+                ("Salen Mañana", total_salen_manana, ", ".join(rooms_salen_manana) if rooms_salen_manana else "N/A", manana_str),
+                ("VIPs Salen Mañana", total_vip_salen_manana, ", ".join(rooms_vip_salen_manana) if rooms_vip_salen_manana else "N/A", manana_str),
+                ("Llegan Hoy", total_llegan_hoy, ", ".join(rooms_llegan_hoy) if rooms_llegan_hoy else "N/A", hoy_str),
+                ("VIPs Llegan Hoy", total_vip_llegan_hoy, ", ".join(rooms_vip_llegan_hoy) if rooms_vip_llegan_hoy else "N/A", hoy_str),
+                ("Llegan Mañana", total_llegan_manana, ", ".join(rooms_llegan_manana) if rooms_llegan_manana else "N/A", manana_str),
+                ("VIPs Llegan Mañana", total_vip_llegan_manana, ", ".join(rooms_vip_llegan_manana) if rooms_vip_llegan_manana else "N/A", manana_str),
             ]
             for row_idx, (cat, tot, rms, fecha) in enumerate(rooms_data_excel, 3):
                 ws_rooms.cell(row=row_idx, column=1, value=cat).fill = fill_gris
@@ -768,7 +706,7 @@ if st.query_params.get("action") == "carta":
                 st.markdown(f"""<div style="background-color: #1a1a2e; border-radius: 8px; padding: 15px; margin: 10px 0; border: 1px solid #00E5FF;">
                     <p style="color: #ccc; font-size: 0.9rem; margin: 0;">👤 <b>Huésped:</b> <span style="color: #00E5FF; font-size: 1.1rem;">{nombre_huesped}</span><br>
                     🚪 <b>Habitación:</b> <span style="color: #00E5FF;">{room_huesped if room_huesped else 'N/A'}</span><br>
-                    📅 <b>Check-out:</b> <span style="color: #00E5FF;">{fmt_fecha(check_out_huesped) if check_out_huesped else 'N/A'}</span></p></div>""", unsafe_allow_html=True)
+                    📅 <b>Check-out:</b> <span style="color: #00E5FF;">{check_out_huesped if check_out_huesped else 'N/A'}</span></p></div>""", unsafe_allow_html=True)
                 plantilla_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "plantilla_despedida.docx")
                 if not os.path.exists(plantilla_path):
                     st.warning("⚠️ No se encontró la plantilla `plantilla_despedida.docx`")
@@ -858,14 +796,12 @@ if mostrar_formulario:
                 cursor = conn.cursor()
                 cursor.execute("""INSERT INTO huespedes (eta, name, qty, room, email, check_in, check_out, res_number, phone, info, ird, hsk, rate, trans)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (eta, name, qty, room, email, parse_fecha_input(check_in), parse_fecha_input(check_out),
-                     res_number, phone, info, ird, hsk, rate, trans))
+                    (eta, name, qty, room, email, check_in.strftime("%b %d"), check_out.strftime("%b %d"), res_number, phone, info, ird, hsk, rate, trans))
                 conn.commit(); conn.close()
-                cargar_reservaciones.clear()
                 st.query_params.clear(); st.rerun()
 
 # ============================================================
-# FORMULARIO EDITAR RESERVA
+# FORMULARIO EDITAR RESERVA - CORREGIDO
 # ============================================================
 if mostrar_editar:
     fila_guardada = st.session_state.get("fila_seleccionada")
@@ -874,9 +810,9 @@ if mostrar_editar:
             st.subheader("✏️ Editar Reservación")
             if st.button("↩️ REGRESAR", key="regresar_editar"):
                 st.query_params.clear(); st.rerun()
-            try: check_in_dt = datetime.strptime(fila_guardada.get("check_in", ""), "%Y-%m-%d")
+            try: check_in_dt = datetime.strptime(fila_guardada.get("check_in", ""), "%b %d").replace(year=datetime.now().year)
             except: check_in_dt = datetime.now()
-            try: check_out_dt = datetime.strptime(fila_guardada.get("check_out", ""), "%Y-%m-%d")
+            try: check_out_dt = datetime.strptime(fila_guardada.get("check_out", ""), "%b %d").replace(year=datetime.now().year)
             except: check_out_dt = datetime.now()
             with st.form("form_editar"):
                 c1, c2, c3, c4 = st.columns(4)
@@ -886,11 +822,15 @@ if mostrar_editar:
                 eta_12h = c1.selectbox("ETA", options=horas_eta_12h, index=eta_index)
                 eta = mapa_12a24[eta_12h]
                 name = c2.text_input("Name", value=fila_guardada.get("name", ""))
+                # CORRECCIÓN 2: Manejar qty como float/None de forma segura
                 qty_raw = fila_guardada.get("qty", 0)
                 try:
-                    if qty_raw is None or str(qty_raw).strip() == "": qty_val = 0
-                    else: qty_val = int(float(qty_raw))
-                except (ValueError, TypeError): qty_val = 0
+                    if qty_raw is None or str(qty_raw).strip() == "":
+                        qty_val = 0
+                    else:
+                        qty_val = int(float(qty_raw))
+                except (ValueError, TypeError):
+                    qty_val = 0
                 qty = c3.number_input("Qty", min_value=0, value=qty_val)
                 room = c4.text_input("Room", value=fila_guardada.get("room", ""))
                 c5, c6, c7, c8 = st.columns(4)
@@ -911,10 +851,9 @@ if mostrar_editar:
                     cursor = conn.cursor()
                     cursor.execute("""UPDATE huespedes SET eta=?, name=?, qty=?, room=?, email=?, check_in=?, check_out=?,
                         res_number=?, phone=?, info=?, ird=?, hsk=?, rate=?, trans=? WHERE id=?""",
-                        (eta, name, qty, room, email, parse_fecha_input(check_in), parse_fecha_input(check_out),
+                        (eta, name, qty, room, email, check_in.strftime("%b %d"), check_out.strftime("%b %d"),
                          res_number, phone, info, ird, hsk, rate, trans, fila_guardada["id"]))
                     conn.commit(); conn.close()
-                    cargar_reservaciones.clear()
                     st.session_state.pop("fila_seleccionada", None)
                     st.query_params.clear()
                     st.success("Reserva actualizada correctamente.")
@@ -925,44 +864,41 @@ if mostrar_editar:
             st.query_params.clear(); st.rerun()
 
 # ============================================================
-# TABLA PRINCIPAL (SIEMPRE VISIBLE)
+# TABLA ÚNICA (SIEMPRE VISIBLE) CON BÚSQUEDA INTELIGENTE
 # ============================================================
 st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
 df_reservas = cargar_reservaciones()
 if filtro_checkout:
     df_reservas = df_reservas[df_reservas["check_out"] == filtro_checkout]
-    st.info(f"📅 Mostrando reservas que salen el: {fmt_fecha(filtro_checkout)}")
+    st.info(f"📅 Mostrando reservas que salen el: {filtro_checkout}")
 if fecha_filtro_activo and filtro_fecha_date:
-    df_reservas = df_reservas[df_reservas["check_in"] == filtro_fecha_date]
-    st.info(f"📅 Mostrando reservas con check-in el: {fmt_fecha(filtro_fecha_date)}")
+    fecha_filtro = datetime.strptime(filtro_fecha_date, "%Y-%m-%d").strftime("%b %d")
+    df_reservas = df_reservas[df_reservas["check_in"] == fecha_filtro]
+    st.info(f"📅 Mostrando reservas con check-in el: {fecha_filtro}")
 if busqueda and busqueda.strip():
     busqueda_lower = busqueda.strip().lower()
     mask = df_reservas.astype(str).apply(lambda row: row.str.lower().str.contains(busqueda_lower, na=False).any(), axis=1)
     df_reservas = df_reservas[mask]
     if len(df_reservas) == 0: st.info(f"🔍 No se encontraron resultados para: '{busqueda}'")
 
-# Mostrar fechas formateadas en la tabla
-df_display = df_reservas.copy()
-df_display["check_in"] = df_display["check_in"].apply(fmt_fecha)
-df_display["check_out"] = df_display["check_out"].apply(fmt_fecha)
-
-# FIX 4: AgGrid sin custom_css para evitar segfault
-gb = GridOptionsBuilder.from_dataframe(df_display)
+gb = GridOptionsBuilder.from_dataframe(df_reservas)
 gb.configure_selection(selection_mode="single", use_checkbox=False)
-grid_return = AgGrid(df_display, gridOptions=gb.build(), height=620, theme="streamlit",
-    key="tabla_principal_concierge")
+grid_return = AgGrid(df_reservas, gridOptions=gb.build(), height=620, theme="streamlit",
+    key="tabla_principal_concierge",
+    custom_css={
+        ".ag-root-wrapper": {"background-color": "#101010 !important"},
+        ".ag-cell": {"color": "white !important", "background-color": "#101010 !important"},
+        ".ag-row-selected .ag-cell": {"background-color": "#00FFFF !important", "color": "#000000 !important", "font-weight": "bold !important"}
+    })
 seleccion = grid_return.get("selected_rows")
 if seleccion is not None and len(seleccion) > 0:
-    if isinstance(seleccion, pd.DataFrame): 
-        idx = seleccion.index[0]
-        st.session_state["fila_seleccionada"] = df_reservas.loc[idx].to_dict()
-    else: 
-        st.session_state["fila_seleccionada"] = dict(seleccion[0])
+    if isinstance(seleccion, pd.DataFrame): st.session_state["fila_seleccionada"] = seleccion.iloc[0].to_dict()
+    else: st.session_state["fila_seleccionada"] = dict(seleccion[0])
 elif seleccion is not None and len(seleccion) == 0:
     st.session_state.pop("fila_seleccionada", None)
 
 # ============================================================
-# BORRADO CON CLAVE
+# LÓGICA DE BORRADO CON CLAVE
 # ============================================================
 if st.query_params.get("action") == "cancelar":
     st.subheader("❌ Cancelar Reservación")
@@ -979,7 +915,6 @@ if st.query_params.get("action") == "cancelar":
                 cursor = conn.cursor()
                 cursor.execute("DELETE FROM huespedes WHERE id = ?", (id_a_borrar,))
                 conn.commit(); conn.close()
-                cargar_reservaciones.clear()
                 st.session_state.pop("fila_seleccionada", None)
                 st.query_params.clear()
                 st.success("Registro eliminado correctamente.")
