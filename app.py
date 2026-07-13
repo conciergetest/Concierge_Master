@@ -182,6 +182,10 @@ with header_col2:
     if c6.button("❌ BORRAR", key="btn_cancelar"): st.query_params["action"] = "cancelar"; st.rerun()
     if c7.button("📄 REPORTE", key="btn_reporte"): st.query_params["action"] = "reporte"; st.rerun()
     if c8.button("📅 AGENDA", key="btn_agenda"): st.switch_page("pages/agenda.py")
+    # Fecha y hora actual del sistema
+    ahora = datetime.now()
+    fecha_hora_str = ahora.strftime("%B %d, %Y — %I:%M %p")
+    st.markdown(f'<div style="text-align:right; color:#888; font-size:0.7rem; margin-top:2px;">🕐 {fecha_hora_str}</div>', unsafe_allow_html=True)
 
 df_todas = cargar_reservaciones()
 total_reservas = len(df_todas)
@@ -805,8 +809,7 @@ if mostrar_formulario:
             st.query_params.clear(); st.rerun()
         with st.form("form_reserva"):
             c1, c2, c3, c4 = st.columns(4)
-            eta_12h = c1.selectbox("ETA", options=horas_eta_12h, index=horas_eta_12h.index(hora_actual_12h()) if hora_actual_12h() in horas_eta_12h else 0)
-            eta = mapa_12a24[eta_12h]
+            eta = c1.text_input("ETA", value=hora_actual_12h())
             name = c2.text_input("Name")
             qty = c3.number_input("Qty", min_value=0, value=0)
             room = c4.text_input("Room")
@@ -848,11 +851,7 @@ if mostrar_editar:
             except: check_out_dt = datetime.now()
             with st.form("form_editar"):
                 c1, c2, c3, c4 = st.columns(4)
-                eta_actual_24h = fila_guardada.get("eta", "")
-                eta_actual_12h = hora_24_a_12(eta_actual_24h)
-                eta_index = horas_eta_12h.index(eta_actual_12h) if eta_actual_12h in horas_eta_12h else 0
-                eta_12h = c1.selectbox("ETA", options=horas_eta_12h, index=eta_index)
-                eta = mapa_12a24[eta_12h]
+                eta = c1.text_input("ETA", value=str(fila_guardada.get("eta", "")))
                 name = c2.text_input("Name", value=fila_guardada.get("name", ""))
                 # CORRECCIÓN 2: Manejar qty como float/None de forma segura
                 qty_raw = fila_guardada.get("qty", 0)
