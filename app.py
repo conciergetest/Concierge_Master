@@ -162,6 +162,14 @@ div[data-testid="stDateInput"] > div > div > input { background-color: #1a1a2e !
 div[data-testid="stDateInput"] label { color: #888 !important; font-size: 0.75rem !important; margin-bottom: 2px !important; }
 button[key="btn_aplicar_fecha"] { background-color: #00E5FF !important; color: #000000 !important; font-weight: bold !important; font-size: 0.7rem !important; border: none !important; border-radius: 6px !important; padding: 4px 8px !important; min-height: 28px !important; }
 button[key="btn_limpiar_fecha"] { background-color: #333333 !important; color: #ffffff !important; font-weight: bold !important; font-size: 0.7rem !important; border: 1px solid #555 !important; border-radius: 6px !important; padding: 4px 8px !important; min-height: 28px !important; }
+button[key="btn_nueva"] { background-color: #00E5FF !important; color: #000000 !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
+button[key="btn_editar"] { background-color: #FF9800 !important; color: #000000 !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
+button[key="btn_importar"] { background-color: #4CAF50 !important; color: #ffffff !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
+button[key="btn_exportar"] { background-color: #2196F3 !important; color: #ffffff !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
+button[key="btn_carta"] { background-color: #9C27B0 !important; color: #ffffff !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
+button[key="btn_cancelar"] { background-color: #f44336 !important; color: #ffffff !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
+button[key="btn_reporte"] { background-color: #FFC107 !important; color: #000000 !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
+button[key="btn_agenda"] { background-color: #00BCD4 !important; color: #000000 !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
 button[key="btn_procesar_excel"] { background-color: #00E5FF !important; color: #000000 !important; font-weight: bold !important; font-size: 0.85rem !important; border: none !important; border-radius: 8px !important; padding: 10px 20px !important; min-height: 40px !important; }
 .ag-root-wrapper { background-color: #101010 !important; }
 .ag-cell { color: white !important; background-color: #101010 !important; }
@@ -182,10 +190,6 @@ with header_col2:
     if c6.button("❌ BORRAR", key="btn_cancelar"): st.query_params["action"] = "cancelar"; st.rerun()
     if c7.button("📄 REPORTE", key="btn_reporte"): st.query_params["action"] = "reporte"; st.rerun()
     if c8.button("📅 AGENDA", key="btn_agenda"): st.switch_page("pages/agenda.py")
-    # Fecha y hora actual del sistema
-    ahora = datetime.now()
-    fecha_hora_str = ahora.strftime("%B %d, %Y — %I:%M %p")
-    st.markdown(f'<div style="text-align:right; color:#888; font-size:0.7rem; margin-top:2px;">🕐 {fecha_hora_str}</div>', unsafe_allow_html=True)
 
 df_todas = cargar_reservaciones()
 total_reservas = len(df_todas)
@@ -243,6 +247,18 @@ with left_col:
             st.query_params.pop("fecha_activa", None)
             st.query_params.pop("checkout_filtro", None)
             st.rerun()
+
+    # BOTONES DE ACCION
+    st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+    btn_col1, btn_col2, btn_col3, btn_col4, btn_col5, btn_col6, btn_col7, btn_col8 = st.columns(8)
+    if btn_col1.button("NUEVA", key="btn_nueva", use_container_width=True): st.query_params["action"] = "nueva"; st.rerun()
+    if btn_col2.button("EDITAR", key="btn_editar", use_container_width=True): st.query_params["action"] = "editar"; st.rerun()
+    if btn_col3.button("IMPORTAR", key="btn_importar", use_container_width=True): st.query_params["action"] = "importar"; st.rerun()
+    if btn_col4.button("EXPORTAR", key="btn_exportar", use_container_width=True): st.query_params["action"] = "exportar"; st.rerun()
+    if btn_col5.button("CARTA", key="btn_carta", use_container_width=True): st.query_params["action"] = "carta"; st.rerun()
+    if btn_col6.button("BORRAR", key="btn_cancelar", use_container_width=True): st.query_params["action"] = "cancelar"; st.rerun()
+    if btn_col7.button("REPORTE", key="btn_reporte", use_container_width=True): st.query_params["action"] = "reporte"; st.rerun()
+    if btn_col8.button("AGENDA", key="btn_agenda", use_container_width=True): st.switch_page("pages/agenda.py")
 
 with right_col:
     categorias = {"VIP": "#00E5FF", "ANNIVERSARY": "#4CAF50", "BIRTHDAY": "#FF5252",
@@ -809,7 +825,8 @@ if mostrar_formulario:
             st.query_params.clear(); st.rerun()
         with st.form("form_reserva"):
             c1, c2, c3, c4 = st.columns(4)
-            eta = c1.text_input("ETA", value=hora_actual_12h())
+            eta_12h = c1.selectbox("ETA", options=horas_eta_12h, index=horas_eta_12h.index(hora_actual_12h()) if hora_actual_12h() in horas_eta_12h else 0)
+            eta = mapa_12a24[eta_12h]
             name = c2.text_input("Name")
             qty = c3.number_input("Qty", min_value=0, value=0)
             room = c4.text_input("Room")
@@ -851,7 +868,11 @@ if mostrar_editar:
             except: check_out_dt = datetime.now()
             with st.form("form_editar"):
                 c1, c2, c3, c4 = st.columns(4)
-                eta = c1.text_input("ETA", value=str(fila_guardada.get("eta", "")))
+                eta_actual_24h = fila_guardada.get("eta", "")
+                eta_actual_12h = hora_24_a_12(eta_actual_24h)
+                eta_index = horas_eta_12h.index(eta_actual_12h) if eta_actual_12h in horas_eta_12h else 0
+                eta_12h = c1.selectbox("ETA", options=horas_eta_12h, index=eta_index)
+                eta = mapa_12a24[eta_12h]
                 name = c2.text_input("Name", value=fila_guardada.get("name", ""))
                 # CORRECCIÓN 2: Manejar qty como float/None de forma segura
                 qty_raw = fila_guardada.get("qty", 0)
