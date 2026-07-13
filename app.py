@@ -181,30 +181,51 @@ header_col1, header_col2 = st.columns([1.3, 8.7])
 with header_col1:
     st.markdown('<h2 style="color:#00E5FF; margin:0; padding:0; font-size:1.1rem; line-height:1.0;">Concierge<br>Master v5.1</h2>', unsafe_allow_html=True)
 with header_col2:
-    # HORA LOCAL DEL NAVEGADOR con segundos
-    st.markdown("""
-    <div id="hora-local" style="text-align:right; color:#00E5FF; font-size:1.1rem; font-weight:bold; margin-top:2px; text-shadow: 0 0 10px #00E5FF;">
-        Cargando hora...
-    </div>
-    <script>
-        function actualizarHora() {
-            const ahora = new Date();
-            const mes = ahora.toLocaleDateString('en-US', { month: 'long' });
-            const dia = ahora.getDate();
-            const anio = ahora.getFullYear();
-            let hora = ahora.getHours();
-            const minutos = String(ahora.getMinutes()).padStart(2, '0');
-            const segundos = String(ahora.getSeconds()).padStart(2, '0');
-            const ampm = hora >= 12 ? 'PM' : 'AM';
-            hora = hora % 12;
-            hora = hora ? hora : 12;
-            const textoFinal = mes + ' ' + dia + ', ' + anio + ' — ' + hora + ':' + minutos + ':' + segundos + ' ' + ampm;
-            document.getElementById('hora-local').textContent = textoFinal;
-        }
-        actualizarHora();
-        setInterval(actualizarHora, 1000);
-    </script>
-    """, unsafe_allow_html=True)
+    # HORA LOCAL DEL NAVEGADOR con segundos - usando iframe para ejecutar JS
+    import streamlit.components.v1 as components
+
+    clock_html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body { margin: 0; padding: 0; background: transparent; }
+            #hora-local {
+                text-align: right;
+                color: #00E5FF;
+                font-size: 1.1rem;
+                font-weight: bold;
+                margin-top: 2px;
+                text-shadow: 0 0 10px #00E5FF;
+                font-family: 'Segoe UI', sans-serif;
+                white-space: nowrap;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="hora-local">Cargando hora...</div>
+        <script>
+            function actualizarHora() {
+                const ahora = new Date();
+                const mes = ahora.toLocaleDateString('en-US', { month: 'long' });
+                const dia = ahora.getDate();
+                const anio = ahora.getFullYear();
+                let hora = ahora.getHours();
+                const minutos = String(ahora.getMinutes()).padStart(2, '0');
+                const segundos = String(ahora.getSeconds()).padStart(2, '0');
+                const ampm = hora >= 12 ? 'PM' : 'AM';
+                hora = hora % 12;
+                hora = hora ? hora : 12;
+                const textoFinal = mes + ' ' + dia + ', ' + anio + ' — ' + hora + ':' + minutos + ':' + segundos + ' ' + ampm;
+                document.getElementById('hora-local').textContent = textoFinal;
+            }
+            actualizarHora();
+            setInterval(actualizarHora, 1000);
+        </script>
+    </body>
+    </html>
+    """
+    components.html(clock_html, height=35)
 
 df_todas = cargar_reservaciones()
 total_reservas = len(df_todas)
