@@ -966,6 +966,24 @@ if busqueda and busqueda.strip():
 
 gb = GridOptionsBuilder.from_dataframe(df_reservas)
 gb.configure_selection(selection_mode="single", use_checkbox=False)
+
+# Configurar anchos de columnas: id y qty más estrechas, phone más ancha
+gb.configure_column("id", width=55, minWidth=50, maxWidth=65)
+gb.configure_column("qty", width=55, minWidth=50, maxWidth=65)
+gb.configure_column("phone", width=160, minWidth=140)
+gb.configure_column("eta", width=85, minWidth=75)
+gb.configure_column("room", width=70, minWidth=60)
+gb.configure_column("name", width=180, minWidth=140)
+gb.configure_column("email", width=200, minWidth=150)
+gb.configure_column("check_in", width=80, minWidth=70)
+gb.configure_column("check_out", width=80, minWidth=70)
+gb.configure_column("res_number", width=110, minWidth=90)
+gb.configure_column("info", width=180, minWidth=130)
+gb.configure_column("ird", width=130, minWidth=100)
+gb.configure_column("hsk", width=130, minWidth=100)
+gb.configure_column("rate", width=80, minWidth=60)
+gb.configure_column("trans", width=130, minWidth=100)
+
 grid_return = AgGrid(df_reservas, gridOptions=gb.build(), height=620, theme="streamlit",
     key="tabla_principal_concierge",
     custom_css={
