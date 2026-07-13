@@ -179,7 +179,7 @@ button[key="btn_procesar_excel"] { background-color: #00E5FF !important; color: 
 
 header_col1, header_col2 = st.columns([1.3, 8.7])
 with header_col1:
-    st.markdown("<h2 style="color:#00E5FF; margin:0; padding:0; font-size:1.1rem; line-height:1.0;">Concierge<br>Master v5.1</h2>", unsafe_allow_html=True)
+    st.markdown('<h2 style="color:#00E5FF; margin:0; padding:0; font-size:1.1rem; line-height:1.0;">Concierge<br>Master v5.1</h2>', unsafe_allow_html=True)
 with header_col2:
     # Fecha y hora actual del sistema - CIAN BRILLANTE Y GRANDE
     ahora = datetime.now()
