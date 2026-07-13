@@ -162,14 +162,14 @@ div[data-testid="stDateInput"] > div > div > input { background-color: #1a1a2e !
 div[data-testid="stDateInput"] label { color: #888 !important; font-size: 0.75rem !important; margin-bottom: 2px !important; }
 button[key="btn_aplicar_fecha"] { background-color: #00E5FF !important; color: #000000 !important; font-weight: bold !important; font-size: 0.7rem !important; border: none !important; border-radius: 6px !important; padding: 4px 8px !important; min-height: 28px !important; }
 button[key="btn_limpiar_fecha"] { background-color: #333333 !important; color: #ffffff !important; font-weight: bold !important; font-size: 0.7rem !important; border: 1px solid #555 !important; border-radius: 6px !important; padding: 4px 8px !important; min-height: 28px !important; }
-button[key="btn_nueva"] { background-color: #00E5FF !important; color: #000000 !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
-button[key="btn_editar"] { background-color: #FF9800 !important; color: #000000 !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
-button[key="btn_importar"] { background-color: #4CAF50 !important; color: #ffffff !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
-button[key="btn_exportar"] { background-color: #2196F3 !important; color: #ffffff !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
-button[key="btn_carta"] { background-color: #9C27B0 !important; color: #ffffff !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
-button[key="btn_cancelar"] { background-color: #f44336 !important; color: #ffffff !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
-button[key="btn_reporte"] { background-color: #FFC107 !important; color: #000000 !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
-button[key="btn_agenda"] { background-color: #00BCD4 !important; color: #000000 !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
+button[key="btn_nueva_v2"] { background-color: #00E5FF !important; color: #000000 !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
+button[key="btn_editar_v2"] { background-color: #FF9800 !important; color: #000000 !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
+button[key="btn_importar_v2"] { background-color: #4CAF50 !important; color: #ffffff !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
+button[key="btn_exportar_v2"] { background-color: #2196F3 !important; color: #ffffff !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
+button[key="btn_carta_v2"] { background-color: #9C27B0 !important; color: #ffffff !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
+button[key="btn_cancelar_v2"] { background-color: #f44336 !important; color: #ffffff !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
+button[key="btn_reporte_v2"] { background-color: #FFC107 !important; color: #000000 !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
+button[key="btn_agenda_v2"] { background-color: #00BCD4 !important; color: #000000 !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
 button[key="btn_procesar_excel"] { background-color: #00E5FF !important; color: #000000 !important; font-weight: bold !important; font-size: 0.85rem !important; border: none !important; border-radius: 8px !important; padding: 10px 20px !important; min-height: 40px !important; }
 .ag-root-wrapper { background-color: #101010 !important; }
 .ag-cell { color: white !important; background-color: #101010 !important; }
@@ -179,17 +179,12 @@ button[key="btn_procesar_excel"] { background-color: #00E5FF !important; color: 
 
 header_col1, header_col2 = st.columns([1.3, 8.7])
 with header_col1:
-    st.markdown("""<h2 style="color:#00E5FF; margin:0; padding:0; font-size:1.1rem; line-height:1.0;">🛎️ Concierge<br>Master v5.1</h2>""", unsafe_allow_html=True)
+    st.markdown("<h2 style="color:#00E5FF; margin:0; padding:0; font-size:1.1rem; line-height:1.0;">Concierge<br>Master v5.1</h2>", unsafe_allow_html=True)
 with header_col2:
-    c1, c2, c3, c4, c5, c6, c7, c8 = st.columns(8)
-    if c1.button("➕ NUEVA", key="btn_nueva"): st.query_params["action"] = "nueva"; st.rerun()
-    if c2.button("✏️ EDITAR", key="btn_editar"): st.query_params["action"] = "editar"; st.rerun()
-    if c3.button("📥 IMPORTAR", key="btn_importar"): st.query_params["action"] = "importar"; st.rerun()
-    if c4.button("📤 EXPORTAR", key="btn_exportar"): st.query_params["action"] = "exportar"; st.rerun()
-    if c5.button("✉️ CARTA", key="btn_carta"): st.query_params["action"] = "carta"; st.rerun()
-    if c6.button("❌ BORRAR", key="btn_cancelar"): st.query_params["action"] = "cancelar"; st.rerun()
-    if c7.button("📄 REPORTE", key="btn_reporte"): st.query_params["action"] = "reporte"; st.rerun()
-    if c8.button("📅 AGENDA", key="btn_agenda"): st.switch_page("pages/agenda.py")
+    # Fecha y hora actual del sistema - CIAN BRILLANTE Y GRANDE
+    ahora = datetime.now()
+    fecha_hora_str = ahora.strftime("%B %d, %Y — %I:%M %p")
+    st.markdown(f'<div style="text-align:right; color:#00E5FF; font-size:1.1rem; font-weight:bold; margin-top:2px; text-shadow: 0 0 10px #00E5FF;"> {fecha_hora_str}</div>', unsafe_allow_html=True)
 
 df_todas = cargar_reservaciones()
 total_reservas = len(df_todas)
@@ -251,14 +246,14 @@ with left_col:
     # BOTONES DE ACCION
     st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
     btn_col1, btn_col2, btn_col3, btn_col4, btn_col5, btn_col6, btn_col7, btn_col8 = st.columns(8)
-    if btn_col1.button("NUEVA", key="btn_nueva", use_container_width=True): st.query_params["action"] = "nueva"; st.rerun()
-    if btn_col2.button("EDITAR", key="btn_editar", use_container_width=True): st.query_params["action"] = "editar"; st.rerun()
-    if btn_col3.button("IMPORTAR", key="btn_importar", use_container_width=True): st.query_params["action"] = "importar"; st.rerun()
-    if btn_col4.button("EXPORTAR", key="btn_exportar", use_container_width=True): st.query_params["action"] = "exportar"; st.rerun()
-    if btn_col5.button("CARTA", key="btn_carta", use_container_width=True): st.query_params["action"] = "carta"; st.rerun()
-    if btn_col6.button("BORRAR", key="btn_cancelar", use_container_width=True): st.query_params["action"] = "cancelar"; st.rerun()
-    if btn_col7.button("REPORTE", key="btn_reporte", use_container_width=True): st.query_params["action"] = "reporte"; st.rerun()
-    if btn_col8.button("AGENDA", key="btn_agenda", use_container_width=True): st.switch_page("pages/agenda.py")
+    if btn_col1.button("NUEVA", key="btn_nueva_v2", use_container_width=True): st.query_params["action"] = "nueva"; st.rerun()
+    if btn_col2.button("EDITAR", key="btn_editar_v2", use_container_width=True): st.query_params["action"] = "editar"; st.rerun()
+    if btn_col3.button("IMPORTAR", key="btn_importar_v2", use_container_width=True): st.query_params["action"] = "importar"; st.rerun()
+    if btn_col4.button("EXPORTAR", key="btn_exportar_v2", use_container_width=True): st.query_params["action"] = "exportar"; st.rerun()
+    if btn_col5.button("CARTA", key="btn_carta_v2", use_container_width=True): st.query_params["action"] = "carta"; st.rerun()
+    if btn_col6.button("BORRAR", key="btn_cancelar_v2", use_container_width=True): st.query_params["action"] = "cancelar"; st.rerun()
+    if btn_col7.button("REPORTE", key="btn_reporte_v2", use_container_width=True): st.query_params["action"] = "reporte"; st.rerun()
+    if btn_col8.button("AGENDA", key="btn_agenda_v2", use_container_width=True): st.switch_page("pages/agenda.py")
 
 with right_col:
     categorias = {"VIP": "#00E5FF", "ANNIVERSARY": "#4CAF50", "BIRTHDAY": "#FF5252",
