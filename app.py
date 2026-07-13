@@ -820,8 +820,7 @@ if mostrar_formulario:
             st.query_params.clear(); st.rerun()
         with st.form("form_reserva"):
             c1, c2, c3, c4 = st.columns(4)
-            eta_12h = c1.selectbox("ETA", options=horas_eta_12h, index=horas_eta_12h.index(hora_actual_12h()) if hora_actual_12h() in horas_eta_12h else 0)
-            eta = mapa_12a24[eta_12h]
+            eta = c1.text_input("ETA", value=hora_actual_12h())
             name = c2.text_input("Name")
             qty = c3.number_input("Qty", min_value=0, value=0)
             room = c4.text_input("Room")
@@ -863,11 +862,7 @@ if mostrar_editar:
             except: check_out_dt = datetime.now()
             with st.form("form_editar"):
                 c1, c2, c3, c4 = st.columns(4)
-                eta_actual_24h = fila_guardada.get("eta", "")
-                eta_actual_12h = hora_24_a_12(eta_actual_24h)
-                eta_index = horas_eta_12h.index(eta_actual_12h) if eta_actual_12h in horas_eta_12h else 0
-                eta_12h = c1.selectbox("ETA", options=horas_eta_12h, index=eta_index)
-                eta = mapa_12a24[eta_12h]
+                eta = c1.text_input("ETA", value=str(fila_guardada.get("eta", "")))
                 name = c2.text_input("Name", value=fila_guardada.get("name", ""))
                 # CORRECCIÓN 2: Manejar qty como float/None de forma segura
                 qty_raw = fila_guardada.get("qty", 0)
