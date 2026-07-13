@@ -40,6 +40,38 @@ for h in range(24):
 mapa_12a24 = dict(zip(horas_eta_12h, horas_eta_24h))
 mapa_24a12 = dict(zip(horas_eta_24h, horas_eta_12h))
 
+# Normalizador: convierte cualquier hora (HH:MM:SS, HH:MM, H:MM) a HH:MM
+def normalizar_hora_24(hora_str):
+    if not hora_str or str(hora_str).strip() == "":
+        return ""
+    h = str(hora_str).strip()
+    # Quitar segundos si existen
+    if ":" in h:
+        partes = h.split(":")
+        if len(partes) >= 2:
+            hh = partes[0].zfill(2)
+            mm = partes[1].zfill(2)
+            return f"{hh}:{mm}"
+    return h
+
+def hora_24_a_12(hora_str):
+    h_norm = normalizar_hora_24(hora_str)
+    return mapa_24a12.get(h_norm, "")
+
+def hora_actual_12h():
+    ahora = datetime.now()
+    h, m = ahora.hour, ahora.minute
+    # Redondear al múltiplo de 30 más cercano
+    if m >= 45:
+        m = 0
+        h = (h + 1) % 24
+    elif m >= 15:
+        m = 30
+    else:
+        m = 0
+    hora_24 = f"{h:02d}:{m:02d}"
+    return mapa_24a12.get(hora_24, "12:00 AM")
+
 def exportar_excel_por_categorias(df):
     from openpyxl import Workbook
     from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
@@ -773,7 +805,7 @@ if mostrar_formulario:
             st.query_params.clear(); st.rerun()
         with st.form("form_reserva"):
             c1, c2, c3, c4 = st.columns(4)
-            eta_12h = c1.selectbox("ETA", options=horas_eta_12h, index=0)
+            eta_12h = c1.selectbox("ETA", options=horas_eta_12h, index=horas_eta_12h.index(hora_actual_12h()) if hora_actual_12h() in horas_eta_12h else 0)
             eta = mapa_12a24[eta_12h]
             name = c2.text_input("Name")
             qty = c3.number_input("Qty", min_value=0, value=0)
@@ -817,7 +849,7 @@ if mostrar_editar:
             with st.form("form_editar"):
                 c1, c2, c3, c4 = st.columns(4)
                 eta_actual_24h = fila_guardada.get("eta", "")
-                eta_actual_12h = mapa_24a12.get(eta_actual_24h, "12:00 AM")
+                eta_actual_12h = hora_24_a_12(eta_actual_24h)
                 eta_index = horas_eta_12h.index(eta_actual_12h) if eta_actual_12h in horas_eta_12h else 0
                 eta_12h = c1.selectbox("ETA", options=horas_eta_12h, index=eta_index)
                 eta = mapa_12a24[eta_12h]
