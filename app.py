@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import os
-from st_aggrid import AgGrid, GridOptionsBuilder
 from datetime import datetime, timedelta
 from io import BytesIO
 from supabase import create_client, Client
@@ -1016,37 +1015,44 @@ if busqueda and busqueda.strip():
     df_reservas = df_reservas[mask]
     if len(df_reservas) == 0: st.info(f"🔍 No se encontraron resultados para: '{busqueda}'")
 
-gb = GridOptionsBuilder.from_dataframe(df_reservas)
-gb.configure_selection(selection_mode="single", use_checkbox=False)
+# TABLA CON SELECCIÓN NATIVA DE STREAMLIT
+st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
 
-gb.configure_column("id", width=55, minWidth=50, maxWidth=65)
-gb.configure_column("qty", width=55, minWidth=50, maxWidth=65)
-gb.configure_column("phone", width=160, minWidth=140)
-gb.configure_column("eta", width=85, minWidth=75)
-gb.configure_column("room", width=70, minWidth=60)
-gb.configure_column("name", width=180, minWidth=140)
-gb.configure_column("email", width=200, minWidth=150)
-gb.configure_column("check_in", width=80, minWidth=70)
-gb.configure_column("check_out", width=80, minWidth=70)
-gb.configure_column("res_number", width=110, minWidth=90)
-gb.configure_column("info", width=180, minWidth=130)
-gb.configure_column("ird", width=130, minWidth=100)
-gb.configure_column("hsk", width=130, minWidth=100)
-gb.configure_column("rate", width=80, minWidth=60)
-gb.configure_column("trans", width=130, minWidth=100)
+# Configurar columnas para mejor visualización
+column_config = {
+    "id": st.column_config.NumberColumn("ID", width="small"),
+    "eta": st.column_config.TextColumn("ETA", width="small"),
+    "name": st.column_config.TextColumn("NAME", width="large"),
+    "qty": st.column_config.NumberColumn("QTY", width="small"),
+    "room": st.column_config.TextColumn("ROOM", width="small"),
+    "email": st.column_config.TextColumn("EMAIL", width="medium"),
+    "check_in": st.column_config.TextColumn("CHECK IN", width="small"),
+    "check_out": st.column_config.TextColumn("CHECK OUT", width="small"),
+    "res_number": st.column_config.TextColumn("RESERVATION", width="medium"),
+    "phone": st.column_config.TextColumn("PHONE", width="medium"),
+    "info": st.column_config.TextColumn("INFO", width="large"),
+    "ird": st.column_config.TextColumn("IRD", width="medium"),
+    "hsk": st.column_config.TextColumn("HSK", width="medium"),
+    "rate": st.column_config.TextColumn("RATE", width="small"),
+    "trans": st.column_config.TextColumn("TRANS", width="medium"),
+}
 
-grid_return = AgGrid(df_reservas, gridOptions=gb.build(), height=620, theme="streamlit",
-    key="tabla_principal_concierge",
-    custom_css={
-        ".ag-root-wrapper": {"background-color": "#101010 !important"},
-        ".ag-cell": {"color": "white !important", "background-color": "#101010 !important"},
-        ".ag-row-selected .ag-cell": {"background-color": "#00FFFF !important", "color": "#000000 !important", "font-weight": "bold !important"}
-    })
-seleccion = grid_return.get("selected_rows")
-if seleccion is not None and len(seleccion) > 0:
-    if isinstance(seleccion, pd.DataFrame): st.session_state["fila_seleccionada"] = seleccion.iloc[0].to_dict()
-    else: st.session_state["fila_seleccionada"] = dict(seleccion[0])
-elif seleccion is not None and len(seleccion) == 0:
+# Mostrar tabla con selección de fila
+seleccion = st.dataframe(
+    df_reservas,
+    column_config=column_config,
+    use_container_width=True,
+    height=620,
+    selection_mode="single-row",
+    on_select="rerun",
+    key="tabla_principal_concierge"
+)
+
+# Guardar fila seleccionada en session_state
+if seleccion and seleccion.selection.rows:
+    idx = seleccion.selection.rows[0]
+    st.session_state["fila_seleccionada"] = df_reservas.iloc[idx].to_dict()
+else:
     st.session_state.pop("fila_seleccionada", None)
 
 # ============================================================
@@ -1072,4 +1078,4 @@ if st.query_params.get("action") == "cancelar":
     else:
         st.error("Por favor, selecciona una fila en la tabla primero.")
         if st.button("↩️ REGRESAR", key="regresar_cancelar_error"):
-            st.query_params.clear(); st.reru
+            st.query_params.clear(); st.rerun(
