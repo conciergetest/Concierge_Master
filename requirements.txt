@@ -1,6 +1,5 @@
 streamlit
 pandas
-st-aggrid
 openpyxl
 python-docx
 supabase==2.12.0
