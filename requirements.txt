@@ -3,4 +3,4 @@ pandas
 st-aggrid
 openpyxl
 python-docx
-supabase
+supabase==2.12.0
