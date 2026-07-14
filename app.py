@@ -1049,11 +1049,25 @@ seleccion = st.dataframe(
 )
 
 # Guardar fila seleccionada en session_state
+# Solo actualizar si hay una nueva selección; no borrar la anterior si no hay selección
+# (la selección se pierde al hacer clic en botones que cambian query_params)
 if seleccion and seleccion.selection.rows:
     idx = seleccion.selection.rows[0]
     st.session_state["fila_seleccionada"] = df_reservas.iloc[idx].to_dict()
+    st.session_state["fila_seleccionada_idx"] = idx
+
+# Mostrar fila seleccionada actualmente
+fila_guardada = st.session_state.get("fila_seleccionada")
+if fila_guardada:
+    st.markdown(f"""<div style="background-color: #1a1a2e; border-radius: 8px; padding: 8px 12px; margin: 5px 0; border: 1px solid #00E5FF; display: flex; align-items: center; gap: 10px;">
+        <span style="color: #00E5FF; font-size: 0.8rem;">✅ SELECCIONADO:</span>
+        <span style="color: #fff; font-size: 0.85rem; font-weight: bold;">{fila_guardada.get('name', 'N/A')}</span>
+        <span style="color: #888; font-size: 0.75rem;">| Room: {fila_guardada.get('room', 'N/A')} | ID: {fila_guardada.get('id', 'N/A')}</span>
+    </div>""", unsafe_allow_html=True)
 else:
-    st.session_state.pop("fila_seleccionada", None)
+    st.markdown("""<div style="background-color: #1a0d0d; border-radius: 8px; padding: 8px 12px; margin: 5px 0; border: 1px solid #7d2e2e;">
+        <span style="color: #f44336; font-size: 0.8rem;">⚠️ Ninguna fila seleccionada. Haz clic en una fila de la tabla para editar o borrar.</span>
+    </div>""", unsafe_allow_html=True)
 
 # ============================================================
 # LÓGICA DE BORRADO CON CLAVE
