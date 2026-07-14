@@ -1,14 +1,29 @@
 import streamlit as st
-import sqlite3
 import pandas as pd
 import os
 from st_aggrid import AgGrid, GridOptionsBuilder
 from datetime import datetime, timedelta
 from io import BytesIO
+from supabase import create_client, Client
 
+# ============================================================
+# CONFIGURACIÓN DE PÁGINA Y CONEXIÓN SUPABASE
+# ============================================================
 st.set_page_config(page_title="Concierge Master v5.1", layout="wide", initial_sidebar_state="collapsed")
-db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "recepcion_final.db")
 
+@st.cache_resource
+def init_supabase():
+    """Inicializa la conexión a Supabase usando secrets de Streamlit."""
+    url = st.secrets["SUPABASE_URL"]
+    key = st.secrets["SUPABASE_KEY"]
+    return create_client(url, key)
+
+supabase = init_supabase()
+TABLE_NAME = "huespedes"
+
+# ============================================================
+# PARÁMETROS DE URL
+# ============================================================
 query_params = st.query_params
 mostrar_formulario = query_params.get("action") == "nueva"
 mostrar_editar = query_params.get("action") == "editar"
@@ -18,14 +33,46 @@ filtro_checkout = query_params.get("checkout_filtro")
 filtro_fecha_date = query_params.get("fecha_date")
 fecha_filtro_activo = query_params.get("fecha_activa") == "true"
 
+# ============================================================
+# FUNCIONES CRUD CON SUPABASE
+# ============================================================
+@st.cache_data(ttl=30)
 def cargar_reservaciones():
-    conn = sqlite3.connect(db_path)
-    df = pd.read_sql_query("SELECT * FROM huespedes", conn)
-    conn.close()
+    """Carga todas las reservaciones desde Supabase."""
+    response = supabase.table(TABLE_NAME).select("*").execute()
+    df = pd.DataFrame(response.data)
+    if df.empty:
+        return pd.DataFrame(columns=["id", "eta", "name", "qty", "room", "email",
+                                     "check_in", "check_out", "res_number", "phone",
+                                     "info", "ird", "hsk", "rate", "trans"])
+    # Ordenar por check_in y nombre
     df["check_in_dt"] = pd.to_datetime(df["check_in"], format="%b %d", errors="coerce")
     df = df.sort_values(by=["check_in_dt", "name"])
     return df.drop(columns=["check_in_dt"])
 
+def insertar_reserva(data: dict):
+    """Inserta una nueva reserva en Supabase."""
+    supabase.table(TABLE_NAME).insert(data).execute()
+    st.cache_data.clear()
+
+def actualizar_reserva(reserva_id, data: dict):
+    """Actualiza una reserva existente en Supabase."""
+    supabase.table(TABLE_NAME).update(data).eq("id", reserva_id).execute()
+    st.cache_data.clear()
+
+def eliminar_reserva(reserva_id):
+    """Elimina una reserva de Supabase."""
+    supabase.table(TABLE_NAME).delete().eq("id", reserva_id).execute()
+    st.cache_data.clear()
+
+def insertar_batch_reservas(lista_data: list):
+    """Inserta múltiples reservas en lote."""
+    supabase.table(TABLE_NAME).insert(lista_data).execute()
+    st.cache_data.clear()
+
+# ============================================================
+# HELPERS DE HORA (sin cambios)
+# ============================================================
 horas_eta_12h, horas_eta_24h = [], []
 for h in range(24):
     for m in [0, 30]:
@@ -40,12 +87,10 @@ for h in range(24):
 mapa_12a24 = dict(zip(horas_eta_12h, horas_eta_24h))
 mapa_24a12 = dict(zip(horas_eta_24h, horas_eta_12h))
 
-# Normalizador: convierte cualquier hora (HH:MM:SS, HH:MM, H:MM) a HH:MM
 def normalizar_hora_24(hora_str):
     if not hora_str or str(hora_str).strip() == "":
         return ""
     h = str(hora_str).strip()
-    # Quitar segundos si existen
     if ":" in h:
         partes = h.split(":")
         if len(partes) >= 2:
@@ -61,7 +106,6 @@ def hora_24_a_12(hora_str):
 def hora_actual_12h():
     ahora = datetime.now()
     h, m = ahora.hour, ahora.minute
-    # Redondear al múltiplo de 30 más cercano
     if m >= 45:
         m = 0
         h = (h + 1) % 24
@@ -179,9 +223,8 @@ button[key="btn_procesar_excel"] { background-color: #00E5FF !important; color: 
 
 header_col1, header_col2 = st.columns([1.3, 8.7])
 with header_col1:
-    st.markdown('<h2 style="color:#00E5FF; margin:0; padding:0; font-size:1.1rem; line-height:1.0;">Concierge<br>Master v5.1</h2>', unsafe_allow_html=True)
+    st.markdown('''<h2 style="color:#00E5FF; margin:0; padding:0; font-size:1.1rem; line-height:1.0;">Concierge<br>Master v5.1</h2>''', unsafe_allow_html=True)
 with header_col2:
-    # HORA LOCAL DEL NAVEGADOR con segundos - usando iframe para ejecutar JS
     import streamlit.components.v1 as components
 
     clock_html = """
@@ -327,7 +370,6 @@ with right_col:
         html_chart += f"""<div class="bar-row"><div class="bar-label">{cat}</div><div class="bar-track">
         <div class="bar-fill" style="width:{porcentaje}%;background-color:{color};"></div></div><div class="bar-value">{valor}</div></div>"""
     html_chart += """</div></body></html>"""
-    # CORRECCIÓN 1: Usar st.html en lugar de components.v1.html (deprecado)
     st.html(html_chart)
     mask_relaxury = df_todas.astype(str).apply(lambda row: row.str.upper().str.contains("RELAXURY", na=False).any(), axis=1)
     total_relaxury = mask_relaxury.sum()
@@ -372,9 +414,8 @@ if mostrar_importar:
                     with col_proc:
                         if st.button("📥 IMPORTAR A BASE DE DATOS", key="btn_procesar_excel", use_container_width=True):
                             try:
-                                conn = sqlite3.connect(db_path)
-                                cursor = conn.cursor()
                                 registros_insertados, registros_error, errores_detalle = 0, 0, []
+                                registros_batch = []
                                 for idx, row in df_excel.iterrows():
                                     try:
                                         eta = str(row.get("eta", "")).strip()
@@ -398,14 +439,23 @@ if mostrar_importar:
                                         hsk = str(row.get("hsk", "")).strip()
                                         rate = str(row.get("rate", "")).strip()
                                         trans = str(row.get("trans", "")).strip()
-                                        cursor.execute("""INSERT INTO huespedes (eta, name, qty, room, email, check_in, check_out, res_number, phone, info, ird, hsk, rate, trans)
-                                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                                            (eta, name, qty, room, email, check_in, check_out, res_number, phone, info, ird, hsk, rate, trans))
+
+                                        registro = {
+                                            "eta": eta, "name": name, "qty": qty, "room": room,
+                                            "email": email, "check_in": check_in, "check_out": check_out,
+                                            "res_number": res_number, "phone": phone, "info": info,
+                                            "ird": ird, "hsk": hsk, "rate": rate, "trans": trans
+                                        }
+                                        registros_batch.append(registro)
                                         registros_insertados += 1
                                     except Exception as e:
                                         registros_error += 1
                                         errores_detalle.append(f"Fila {idx + 2}: {str(e)}")
-                                conn.commit(); conn.close()
+
+                                # Insertar en lote a Supabase
+                                if registros_batch:
+                                    insertar_batch_reservas(registros_batch)
+
                                 st.markdown(f"""<div style="background-color: #0d1f0d; border-radius: 8px; padding: 15px; margin: 15px 0; border: 1px solid #2e7d32;">
                                     <h4 style="color: #4CAF50; margin: 0 0 10px 0;">✅ Importación Completada</h4>
                                     <p style="color: #ccc; font-size: 0.9rem; margin: 0;">📥 Registros insertados: <b style="color: #4CAF50;">{registros_insertados}</b><br>
@@ -879,16 +929,18 @@ if mostrar_formulario:
             rate = c13.text_input("Rate")
             trans = c14.text_input("Transportation")
             if st.form_submit_button("Guardar Reservación"):
-                conn = sqlite3.connect(db_path)
-                cursor = conn.cursor()
-                cursor.execute("""INSERT INTO huespedes (eta, name, qty, room, email, check_in, check_out, res_number, phone, info, ird, hsk, rate, trans)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (eta, name, qty, room, email, check_in.strftime("%b %d"), check_out.strftime("%b %d"), res_number, phone, info, ird, hsk, rate, trans))
-                conn.commit(); conn.close()
+                data = {
+                    "eta": eta, "name": name, "qty": qty, "room": room,
+                    "email": email, "check_in": check_in.strftime("%b %d"),
+                    "check_out": check_out.strftime("%b %d"), "res_number": res_number,
+                    "phone": phone, "info": info, "ird": ird, "hsk": hsk,
+                    "rate": rate, "trans": trans
+                }
+                insertar_reserva(data)
                 st.query_params.clear(); st.rerun()
 
 # ============================================================
-# FORMULARIO EDITAR RESERVA - CORREGIDO
+# FORMULARIO EDITAR RESERVA
 # ============================================================
 if mostrar_editar:
     fila_guardada = st.session_state.get("fila_seleccionada")
@@ -905,7 +957,6 @@ if mostrar_editar:
                 c1, c2, c3, c4 = st.columns(4)
                 eta = c1.text_input("ETA", value=str(fila_guardada.get("eta", "")))
                 name = c2.text_input("Name", value=fila_guardada.get("name", ""))
-                # CORRECCIÓN 2: Manejar qty como float/None de forma segura
                 qty_raw = fila_guardada.get("qty", 0)
                 try:
                     if qty_raw is None or str(qty_raw).strip() == "":
@@ -930,13 +981,14 @@ if mostrar_editar:
                 rate = c13.text_input("Rate", value=fila_guardada.get("rate", ""))
                 trans = c14.text_input("Transportation", value=fila_guardada.get("trans", ""))
                 if st.form_submit_button("💾 Guardar Cambios"):
-                    conn = sqlite3.connect(db_path)
-                    cursor = conn.cursor()
-                    cursor.execute("""UPDATE huespedes SET eta=?, name=?, qty=?, room=?, email=?, check_in=?, check_out=?,
-                        res_number=?, phone=?, info=?, ird=?, hsk=?, rate=?, trans=? WHERE id=?""",
-                        (eta, name, qty, room, email, check_in.strftime("%b %d"), check_out.strftime("%b %d"),
-                         res_number, phone, info, ird, hsk, rate, trans, fila_guardada["id"]))
-                    conn.commit(); conn.close()
+                    data = {
+                        "eta": eta, "name": name, "qty": qty, "room": room,
+                        "email": email, "check_in": check_in.strftime("%b %d"),
+                        "check_out": check_out.strftime("%b %d"), "res_number": res_number,
+                        "phone": phone, "info": info, "ird": ird, "hsk": hsk,
+                        "rate": rate, "trans": trans
+                    }
+                    actualizar_reserva(fila_guardada["id"], data)
                     st.session_state.pop("fila_seleccionada", None)
                     st.query_params.clear()
                     st.success("Reserva actualizada correctamente.")
@@ -967,7 +1019,6 @@ if busqueda and busqueda.strip():
 gb = GridOptionsBuilder.from_dataframe(df_reservas)
 gb.configure_selection(selection_mode="single", use_checkbox=False)
 
-# Configurar anchos de columnas: id y qty más estrechas, phone más ancha
 gb.configure_column("id", width=55, minWidth=50, maxWidth=65)
 gb.configure_column("qty", width=55, minWidth=50, maxWidth=65)
 gb.configure_column("phone", width=160, minWidth=140)
@@ -1012,10 +1063,7 @@ if st.query_params.get("action") == "cancelar":
         password = st.text_input("Ingrese clave de autorización:", type="password")
         if st.button("CONFIRMAR Y BORRAR"):
             if password == "D6msnp8a":
-                conn = sqlite3.connect(db_path)
-                cursor = conn.cursor()
-                cursor.execute("DELETE FROM huespedes WHERE id = ?", (id_a_borrar,))
-                conn.commit(); conn.close()
+                eliminar_reserva(id_a_borrar)
                 st.session_state.pop("fila_seleccionada", None)
                 st.query_params.clear()
                 st.success("Registro eliminado correctamente.")
@@ -1024,4 +1072,4 @@ if st.query_params.get("action") == "cancelar":
     else:
         st.error("Por favor, selecciona una fila en la tabla primero.")
         if st.button("↩️ REGRESAR", key="regresar_cancelar_error"):
-            st.query_params.clear(); st.rerun()
+            st.query_params.clear(); st.reru
