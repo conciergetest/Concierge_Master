@@ -1074,23 +1074,24 @@ if busqueda and busqueda.strip():
 # TABLA CON SELECCIÓN NATIVA DE STREAMLIT
 st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
 
-# Configurar columnas para mejor visualización
+# Configurar columnas para mejor visualización - ANCHOS COMPACTOS
+# Todos los anchos en pixeles para que quepan sin scroll horizontal
 column_config = {
-    "id": st.column_config.NumberColumn("ID", width="small"),
-    "eta": st.column_config.TextColumn("ETA", width="small"),
-    "name": st.column_config.TextColumn("NAME", width="large"),
-    "qty": st.column_config.NumberColumn("QTY", width="small"),
-    "room": st.column_config.TextColumn("ROOM", width="small"),
-    "email": st.column_config.TextColumn("EMAIL", width="medium"),
-    "check_in": st.column_config.TextColumn("CHECK IN", width="small"),
-    "check_out": st.column_config.TextColumn("CHECK OUT", width="small"),
-    "res_number": st.column_config.TextColumn("RESERVATION", width="medium"),
-    "phone": st.column_config.TextColumn("PHONE", width="medium"),
-    "info": st.column_config.TextColumn("INFO", width="large"),
-    "ird": st.column_config.TextColumn("IRD", width="medium"),
-    "hsk": st.column_config.TextColumn("HSK", width="medium"),
-    "rate": st.column_config.TextColumn("RATE", width="small"),
-    "trans": st.column_config.TextColumn("TRANS", width="medium"),
+    "id": st.column_config.NumberColumn("ID", width=50),
+    "eta": st.column_config.TextColumn("ETA", width=70),
+    "name": st.column_config.TextColumn("NAME", width=140),
+    "qty": st.column_config.NumberColumn("QTY", width=45),
+    "room": st.column_config.TextColumn("ROOM", width=55),
+    "email": st.column_config.TextColumn("EMAIL", width=130),
+    "check_in": st.column_config.TextColumn("CHECK IN", width=70),
+    "check_out": st.column_config.TextColumn("CHECK OUT", width=75),
+    "res_number": st.column_config.TextColumn("RESERVATION", width=90),
+    "phone": st.column_config.TextColumn("PHONE", width=110),
+    "info": st.column_config.TextColumn("INFO", width=180),
+    "ird": st.column_config.TextColumn("IRD", width=110),
+    "hsk": st.column_config.TextColumn("HSK", width=110),
+    "rate": st.column_config.TextColumn("RATE", width=60),
+    "trans": st.column_config.TextColumn("TRANS", width=80),
 }
 
 # Mostrar tabla con selección de fila
@@ -1148,4 +1149,4 @@ if st.query_params.get("action") == "cancelar":
     else:
         st.error("Por favor, selecciona una fila en la tabla primero.")
         if st.button("↩️ REGRESAR", key="regresar_cancelar_error"):
-            st.query_params.clear(); st.rerun()
+            st.query_params.clear(); st.rer
