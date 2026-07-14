@@ -1015,46 +1015,225 @@ if busqueda and busqueda.strip():
     df_reservas = df_reservas[mask]
     if len(df_reservas) == 0: st.info(f"🔍 No se encontraron resultados para: '{busqueda}'")
 
-# TABLA CON SELECCIÓN NATIVA DE STREAMLIT
+# TABLA CUSTOM CON NAVEGACIÓN POR TECLADO Y SELECCIÓN CIAN
 st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
 
-# Configurar columnas para mejor visualización
-column_config = {
-    "id": st.column_config.NumberColumn("ID", width="small"),
-    "eta": st.column_config.TextColumn("ETA", width="small"),
-    "name": st.column_config.TextColumn("NAME", width="large"),
-    "qty": st.column_config.NumberColumn("QTY", width="small"),
-    "room": st.column_config.TextColumn("ROOM", width="small"),
-    "email": st.column_config.TextColumn("EMAIL", width="medium"),
-    "check_in": st.column_config.TextColumn("CHECK IN", width="small"),
-    "check_out": st.column_config.TextColumn("CHECK OUT", width="small"),
-    "res_number": st.column_config.TextColumn("RESERVATION", width="medium"),
-    "phone": st.column_config.TextColumn("PHONE", width="medium"),
-    "info": st.column_config.TextColumn("INFO", width="large"),
-    "ird": st.column_config.TextColumn("IRD", width="medium"),
-    "hsk": st.column_config.TextColumn("HSK", width="medium"),
-    "rate": st.column_config.TextColumn("RATE", width="small"),
-    "trans": st.column_config.TextColumn("TRANS", width="medium"),
-}
+# Leer selección desde query_params (viene del JavaScript de la tabla)
+selected_from_url = st.query_params.get("sel_row")
+if selected_from_url is not None:
+    try:
+        idx = int(selected_from_url)
+        if 0 <= idx < len(df_reservas):
+            st.session_state["fila_seleccionada"] = df_reservas.iloc[idx].to_dict()
+            st.session_state["fila_seleccionada_idx"] = idx
+    except:
+        pass
 
-# Mostrar tabla con selección de fila
-seleccion = st.dataframe(
-    df_reservas,
-    column_config=column_config,
-    use_container_width=True,
-    height=620,
-    selection_mode="single-row",
-    on_select="rerun",
-    key="tabla_principal_concierge"
-)
+# Recuperar índice seleccionado actual
+selected_idx = st.session_state.get("fila_seleccionada_idx", -1)
 
-# Guardar fila seleccionada en session_state
-# Solo actualizar si hay una nueva selección; no borrar la anterior si no hay selección
-# (la selección se pierde al hacer clic en botones que cambian query_params)
-if seleccion and seleccion.selection.rows:
-    idx = seleccion.selection.rows[0]
-    st.session_state["fila_seleccionada"] = df_reservas.iloc[idx].to_dict()
-    st.session_state["fila_seleccionada_idx"] = idx
+# Convertir DataFrame a JSON para JavaScript
+df_records = df_reservas.reset_index(drop=True).to_dict('records')
+import json
+df_json = json.dumps(df_records, default=str)
+
+# Construir URL base para navegación
+base_url = st.query_params.to_dict()
+base_url.pop("sel_row", None)
+base_url.pop("action", None)
+url_prefix = "?"
+for k, v in base_url.items():
+    url_prefix += f"{k}={v}&"
+
+import streamlit.components.v1 as components
+
+table_html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* {{ margin: 0; padding: 0; box-sizing: border-box; }}
+body {{ 
+    background-color: #0d1117; 
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: #c9d1d9;
+}}
+.table-wrapper {{
+    width: 100%;
+    height: 620px;
+    overflow: auto;
+    background-color: #0d1117;
+    border-radius: 8px;
+    border: 1px solid #30363d;
+}}
+.table-wrapper:focus {{
+    outline: 2px solid #00E5FF;
+    outline-offset: -2px;
+}}
+table {{
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.78rem;
+    table-layout: fixed;
+}}
+thead {{
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}}
+th {{
+    background-color: #161b22;
+    color: #8b949e;
+    font-weight: 700;
+    text-align: left;
+    padding: 9px 10px;
+    border-bottom: 2px solid #30363d;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    white-space: nowrap;
+}}
+td {{
+    padding: 8px 10px;
+    border-bottom: 1px solid #21262d;
+    color: #c9d1d9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    transition: background-color 0.1s;
+}}
+tr:hover td {{
+    background-color: #1c2128;
+}}
+tr.selected td {{
+    background-color: #00FFFF !important;
+    color: #000000 !important;
+    font-weight: 700;
+    border-bottom: 1px solid #00cccc;
+}}
+tr.selected:hover td {{
+    background-color: #00FFFF !important;
+}}
+.col-id {{ width: 45px; }}
+.col-eta {{ width: 60px; }}
+.col-name {{ width: 190px; }}
+.col-qty {{ width: 45px; }}
+.col-room {{ width: 55px; }}
+.col-email {{ width: 190px; }}
+.col-checkin {{ width: 65px; }}
+.col-checkout {{ width: 65px; }}
+.col-res {{ width: 110px; }}
+.col-phone {{ width: 140px; }}
+.col-info {{ width: 220px; }}
+.col-ird {{ width: 85px; }}
+.col-hsk {{ width: 85px; }}
+.col-rate {{ width: 55px; }}
+.col-trans {{ width: 110px; }}
+::-webkit-scrollbar {{ width: 8px; height: 8px; }}
+::-webkit-scrollbar-track {{ background: #0d1117; }}
+::-webkit-scrollbar-thumb {{ background: #30363d; border-radius: 4px; }}
+::-webkit-scrollbar-thumb:hover {{ background: #484f58; }}
+</style>
+</head>
+<body>
+<div class="table-wrapper" id="tblWrap" tabindex="0">
+<table id="dataTable">
+<thead>
+<tr>
+    <th class="col-id">ID</th>
+    <th class="col-eta">ETA</th>
+    <th class="col-name">NAME</th>
+    <th class="col-qty">QTY</th>
+    <th class="col-room">ROOM</th>
+    <th class="col-email">EMAIL</th>
+    <th class="col-checkin">CHECK IN</th>
+    <th class="col-checkout">CHECK OUT</th>
+    <th class="col-res">RESERVATION</th>
+    <th class="col-phone">PHONE</th>
+    <th class="col-info">INFO</th>
+    <th class="col-ird">IRD</th>
+    <th class="col-hsk">HSK</th>
+    <th class="col-rate">RATE</th>
+    <th class="col-trans">TRANS</th>
+</tr>
+</thead>
+<tbody id="tableBody"></tbody>
+</table>
+</div>
+
+<script>
+const data = {df_json};
+let selectedIndex = {selected_idx};
+const tbody = document.getElementById('tableBody');
+const wrap = document.getElementById('tblWrap');
+const urlPrefix = "{url_prefix}";
+
+function navigateToRow(idx) {{
+    if (idx < 0 || idx >= data.length) return;
+    window.location.href = urlPrefix + "sel_row=" + idx;
+}}
+
+function renderTable() {{
+    tbody.innerHTML = '';
+    data.forEach((row, idx) => {{
+        const tr = document.createElement('tr');
+        tr.dataset.index = idx;
+        if (idx === selectedIndex) tr.classList.add('selected');
+
+        const cells = [
+            row.id ?? '', row.eta ?? '', row.name ?? '', row.qty ?? '',
+            row.room ?? '', row.email ?? '', row.check_in ?? '', row.check_out ?? '',
+            row.res_number ?? '', row.phone ?? '', row.info ?? '', row.ird ?? '',
+            row.hsk ?? '', row.rate ?? '', row.trans ?? ''
+        ];
+
+        cells.forEach(val => {{
+            const td = document.createElement('td');
+            td.textContent = val;
+            tr.appendChild(td);
+        }});
+
+        tr.addEventListener('click', () => navigateToRow(idx));
+        tbody.appendChild(tr);
+    }});
+
+    // Scroll selected into view
+    if (selectedIndex >= 0) {{
+        const selRow = tbody.querySelector('tr.selected');
+        if (selRow) selRow.scrollIntoView({{ block: 'nearest', behavior: 'smooth' }});
+    }}
+}}
+
+wrap.addEventListener('keydown', (e) => {{
+    if (e.key === 'ArrowDown') {{
+        e.preventDefault();
+        navigateToRow(selectedIndex + 1);
+    }} else if (e.key === 'ArrowUp') {{
+        e.preventDefault();
+        navigateToRow(selectedIndex - 1);
+    }} else if (e.key === 'Home') {{
+        e.preventDefault();
+        navigateToRow(0);
+    }} else if (e.key === 'End') {{
+        e.preventDefault();
+        navigateToRow(data.length - 1);
+    }}
+}});
+
+// Auto-focus on load so keyboard works immediately
+wrap.focus();
+
+renderTable();
+</script>
+</body>
+</html>
+"""
+
+components.html(table_html, height=640, scrolling=False)
+
 
 # Mostrar fila seleccionada actualmente
 fila_guardada = st.session_state.get("fila_seleccionada")
