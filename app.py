@@ -8,7 +8,7 @@ from supabase import create_client, Client
 # ============================================================
 # CONFIGURACIÓN DE PÁGINA Y CONEXIÓN SUPABASE
 # ============================================================
-st.set_page_config(page_title="Concierge Master v5.1", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Concierge Master", layout="wide", initial_sidebar_state="collapsed")
 
 # ============================================================
 # SPLASHSCREEN
