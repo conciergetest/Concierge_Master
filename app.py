@@ -216,7 +216,63 @@ button[key="btn_agenda_v2"] { background-color: #00BCD4 !important; color: #0000
 button[key="btn_procesar_excel"] { background-color: #00E5FF !important; color: #000000 !important; font-weight: bold !important; font-size: 0.85rem !important; border: none !important; border-radius: 8px !important; padding: 10px 20px !important; min-height: 40px !important; }
 .ag-root-wrapper { background-color: #101010 !important; }
 .ag-cell { color: white !important; background-color: #101010 !important; }
-.ag-row-selected .ag-cell { background-color: #00FFFF !important; color: #000000 !important; font-weight: bold !important; }
+
+/* Override st.dataframe (Glide Data Grid) selection colors */
+div[data-testid="stDataFrame"] .glide-data-grid .dvn-scroller .dvn-cell.selected,
+div[data-testid="stDataFrame"] .glide-data-grid .dvn-scroller .dvn-cell.focus,
+div[data-testid="stDataFrame"] .glide-data-grid .dvn-scroller .dvn-cell.selected.focus,
+div[data-testid="stDataFrame"] .glide-data-grid .dvn-scroller .dvn-cell .selected,
+div[data-testid="stDataFrame"] .glide-data-grid .dvn-scroller .dvn-cell .focus,
+div[data-testid="stDataFrame"] .glide-data-grid .dvn-scroller .dvn-cell .selected.focus,
+div[data-testid="stDataFrame"] [role="gridcell"][aria-selected="true"],
+div[data-testid="stDataFrame"] .selected-cell,
+div[data-testid="stDataFrame"] .selected-row,
+div[data-testid="stDataFrame"] .dvn-cell.selected,
+div[data-testid="stDataFrame"] .dvn-cell.focus,
+div[data-testid="stDataFrame"] .dvn-cell.selected.focus {
+    background-color: #00FFFF !important;
+    color: #000000 !important;
+    font-weight: bold !important;
+}
+
+/* Target the specific Glide Data Grid selection overlay */
+div[data-testid="stDataFrame"] canvas + div,
+div[data-testid="stDataFrame"] .glide-data-grid-canvas,
+div[data-testid="stDataFrame"] .dvn-scroll-inner,
+div[data-testid="stDataFrame"] .dvn-scroll-inner > div {
+    --gdg-accent-color: #00FFFF !important;
+    --gdg-accent-fg: #000000 !important;
+    --gdg-selection-color: #00FFFF !important;
+    --gdg-selection-bg: #00FFFF !important;
+    --gdg-focus-color: #00FFFF !important;
+}
+
+/* More aggressive targeting for selected rows */
+div[data-testid="stDataFrame"] [data-selected="true"],
+div[data-testid="stDataFrame"] .selected,
+div[data-testid="stDataFrame"] *[class*="selected"],
+div[data-testid="stDataFrame"] *[class*="Selected"] {
+    background-color: #00FFFF !important;
+    color: #000000 !important;
+    font-weight: bold !important;
+}
+
+/* Target row selection specifically */
+div[data-testid="stDataFrame"] .dvn-row-selected td,
+div[data-testid="stDataFrame"] .dvn-row-selected,
+div[data-testid="stDataFrame"] tr[aria-selected="true"] td,
+div[data-testid="stDataFrame"] tr.selected td {
+    background-color: #00FFFF !important;
+    color: #000000 !important;
+    font-weight: bold !important;
+}
+
+/* Override any inline styles on selected cells */
+div[data-testid="stDataFrame"] td[style*="background"],
+div[data-testid="stDataFrame"] div[style*="background"] {
+    background-color: #00FFFF !important;
+    color: #000000 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
