@@ -1,5 +1,6 @@
-streamlit>=1.59.0
-streamlit-aggrid==1.2.1.post2
-pandas>=2.0.0
+streamlit
+pandas
+st-aggrid
 openpyxl
 python-docx
+supabase
