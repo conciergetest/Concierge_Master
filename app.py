@@ -105,7 +105,7 @@ if "splash_shown" not in st.session_state:
             <div id="progress-container">
                 <div id="progress-bar"></div>
             </div>
-            <div id="loading-text">Loading Concierge Master 5.1</div>
+            <div id="loading-text">Loading Concierge Master</div>
         </div>
     </div>
     """
