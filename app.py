@@ -434,12 +434,26 @@ total_reservas = len(df_todas)
 
 search_col1, search_col2 = st.columns([2.5, 8.5])
 with search_col1:
-    st.markdown(f"""<div style="background-color: #1a1a2e; border-radius: 8px; padding: 6px 10px; margin-bottom: 4px; text-align: center; border: 1px solid #00E5FF;">
-        <span style="color: #00E5FF; font-size: 0.75rem; font-weight: bold;">📊 TOTAL RESERVAS:</span>
-        <span style="color: #ffffff; font-size: 1.0rem; font-weight: bold;"> {total_reservas}</span></div>""", unsafe_allow_html=True)
+    # Sub-columnas para logo + total reservas
+    logo_col, total_col = st.columns([1.2, 2.3])
+    with logo_col:
+        # Mostrar logo de Concierge Master (ajusta la ruta según tu estructura)
+        try:
+            st.image("logo_concierge_master.png", use_container_width=True)
+        except:
+            # Fallback: extraer imagen del splashscreen si existe
+            import re as _re
+            _match = _re.search(r'src="(data:image/[^"]+)"', splash_html)
+            if _match:
+                st.image(_match.group(1), use_container_width=True)
+    with total_col:
+        st.markdown(f"""<div style="background-color: #1a1a2e; border-radius: 8px; padding: 6px 10px; margin-bottom: 4px; text-align: center; border: 1px solid #00E5FF;">
+            <span style="color: #00E5FF; font-size: 0.75rem; font-weight: bold;">📊 TOTAL RESERVAS:</span>
+            <span style="color: #ffffff; font-size: 1.0rem; font-weight: bold;"> {total_reservas}</span></div>""", unsafe_allow_html=True)
     st.markdown("<p style='color:#888; font-size:0.75rem; margin:0; padding:0;'>🔍 Búsqueda rápida...</p>", unsafe_allow_html=True)
     busqueda = st.text_input("", placeholder="Buscar por nombre, teléfono, reserva, VIP, Relaxury...", label_visibility="collapsed", key="buscador_global")
 with search_col2: pass
+
 
 left_col, right_col = st.columns([5.0, 5.0])
 with left_col:
