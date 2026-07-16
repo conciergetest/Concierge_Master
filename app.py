@@ -1261,7 +1261,7 @@ if st.query_params.get("action") == "cancelar":
     else:
         st.error("Por favor, selecciona una fila en la tabla primero.")
         if st.button("↩️ REGRESAR", key="regresar_cancelar_error"):
-            st.query_params.clear(); st.rerun()un()
+            st.query_params.clear(); st.rerun()
 
 # ═══════════════════════════════════════════════════════════
 # CALCULADORA CIENTÍFICA - PANEL FLOTANTE
