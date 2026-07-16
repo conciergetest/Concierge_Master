@@ -485,7 +485,7 @@ with left_col:
 
     # BOTONES DE ACCION
     st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
-    btn_col1, btn_col2, btn_col3, btn_col4, btn_col5, btn_col6, btn_col7, btn_col8 = st.columns([1, 1, 1, 1, 1, 1, 1, 1])
+    btn_col1, btn_col2, btn_col3, btn_col4, btn_col5, btn_col6, btn_col7, btn_col8, btn_col9 = st.columns([1, 1, 1, 1, 1, 1, 1, 1, 1])
     if btn_col1.button("NUEVA", key="btn_nueva_v2", use_container_width=True): st.query_params["action"] = "nueva"; st.rerun()
     if btn_col2.button("EDITAR", key="btn_editar_v2", use_container_width=True): st.query_params["action"] = "editar"; st.rerun()
     if btn_col3.button("IMPORTAR", key="btn_importar_v2", use_container_width=True): st.query_params["action"] = "importar"; st.rerun()
@@ -494,6 +494,9 @@ with left_col:
     if btn_col6.button("BORRAR", key="btn_cancelar_v2", use_container_width=True): st.query_params["action"] = "cancelar"; st.rerun()
     if btn_col7.button("REPORTE", key="btn_reporte_v2", use_container_width=True): st.query_params["action"] = "reporte"; st.rerun()
     if btn_col8.button("AGENDA", key="btn_agenda_v2", use_container_width=True): st.switch_page("pages/agenda.py")
+    if btn_col9.button("🧮", key="btn_calculadora", use_container_width=True): 
+        st.session_state["mostrar_calculadora"] = True
+        st.rerun()
 
     # BARRA DE BUSQUEDA DEBAJO DE LOS BOTONES
     st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
@@ -1258,4 +1261,272 @@ if st.query_params.get("action") == "cancelar":
     else:
         st.error("Por favor, selecciona una fila en la tabla primero.")
         if st.button("↩️ REGRESAR", key="regresar_cancelar_error"):
-            st.query_params.clear(); st.rer
+            st.query_params.clear(); st.rerun()un()
+
+# ═══════════════════════════════════════════════════════════
+# CALCULADORA CIENTÍFICA - PANEL FLOTANTE
+# ═══════════════════════════════════════════════════════════
+if st.session_state.get("mostrar_calculadora", False):
+    calc_html = """
+    <div id="calc-overlay" style="display:block; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); z-index:999998;" onclick="closeCalculator()"></div>
+    <div id="calculator-panel" style="display:block; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:999999; background:linear-gradient(145deg, #1a1a2e, #16213e); border-radius:20px; padding:24px; box-shadow:0 25px 80px rgba(0,0,0,0.9), 0 0 50px rgba(0,229,255,0.2); border:1px solid rgba(0,229,255,0.35); width:420px; font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+            <span style="color:#00E5FF; font-size:1.15rem; font-weight:bold; letter-spacing:1px;">🧮 Calculadora Científica</span>
+            <button onclick="closeCalculator()" style="background:rgba(255,71,87,0.2); border:1px solid rgba(255,71,87,0.4); color:#ff4757; font-size:1.1rem; cursor:pointer; width:32px; height:32px; border-radius:50%; transition:all 0.3s; display:flex; align-items:center; justify-content:center;">✕</button>
+        </div>
+        <div id="calc-display" style="background:#0a0a1a; border-radius:12px; padding:18px; margin-bottom:18px; text-align:right; min-height:90px; display:flex; flex-direction:column; justify-content:flex-end; border:1px solid rgba(0,229,255,0.25); box-shadow:inset 0 2px 10px rgba(0,0,0,0.5);">
+            <div id="calc-expression" style="color:#888; font-size:0.9rem; min-height:22px; word-break:break-all; font-family:'Courier New', monospace; margin-bottom:4px;"></div>
+            <div id="calc-result" style="color:#00E5FF; font-size:2rem; font-weight:bold; word-break:break-all; font-family:'Courier New', monospace;">0</div>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:10px;">
+            <button class="calc-btn calc-sci" onclick="calcFunc('sin')">sin</button>
+            <button class="calc-btn calc-sci" onclick="calcFunc('cos')">cos</button>
+            <button class="calc-btn calc-sci" onclick="calcFunc('tan')">tan</button>
+            <button class="calc-btn calc-sci" onclick="calcFunc('log')">log</button>
+            <button class="calc-btn calc-sci" onclick="calcFunc('ln')">ln</button>
+
+            <button class="calc-btn calc-sci" onclick="calcFunc('sqrt')">√</button>
+            <button class="calc-btn calc-sci" onclick="calcFunc('pow')">x²</button>
+            <button class="calc-btn calc-sci" onclick="calcFunc('inv')">¹/ₓ</button>
+            <button class="calc-btn calc-sci" onclick="calcFunc('abs')">|x|</button>
+            <button class="calc-btn calc-sci" onclick="calcFunc('fact')">n!</button>
+
+            <button class="calc-btn calc-op" onclick="calcInput('(')">(</button>
+            <button class="calc-btn calc-op" onclick="calcInput(')')">)</button>
+            <button class="calc-btn calc-clear" onclick="calcClear()">AC</button>
+            <button class="calc-btn calc-clear" onclick="calcBackspace()">⌫</button>
+            <button class="calc-btn calc-op" onclick="calcInput('/')">÷</button>
+
+            <button class="calc-btn calc-num" onclick="calcInput('7')">7</button>
+            <button class="calc-btn calc-num" onclick="calcInput('8')">8</button>
+            <button class="calc-btn calc-num" onclick="calcInput('9')">9</button>
+            <button class="calc-btn calc-op" onclick="calcInput('*')">×</button>
+            <button class="calc-btn calc-sci" onclick="calcFunc('pi')">π</button>
+
+            <button class="calc-btn calc-num" onclick="calcInput('4')">4</button>
+            <button class="calc-btn calc-num" onclick="calcInput('5')">5</button>
+            <button class="calc-btn calc-num" onclick="calcInput('6')">6</button>
+            <button class="calc-btn calc-op" onclick="calcInput('-')">−</button>
+            <button class="calc-btn calc-sci" onclick="calcFunc('e')">e</button>
+
+            <button class="calc-btn calc-num" onclick="calcInput('1')">1</button>
+            <button class="calc-btn calc-num" onclick="calcInput('2')">2</button>
+            <button class="calc-btn calc-num" onclick="calcInput('3')">3</button>
+            <button class="calc-btn calc-op" onclick="calcInput('+')">+</button>
+            <button class="calc-btn calc-sci" id="deg-btn" onclick="calcFunc('deg')">DEG</button>
+
+            <button class="calc-btn calc-num" onclick="calcInput('0')" style="grid-column:span 2;">0</button>
+            <button class="calc-btn calc-num" onclick="calcInput('.')">.</button>
+            <button class="calc-btn calc-eq" onclick="calcEqual()" style="grid-column:span 2;">=</button>
+        </div>
+    </div>
+
+    <style>
+    .calc-btn {
+        border: none;
+        border-radius: 12px;
+        padding: 14px 4px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        outline: none;
+    }
+    .calc-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+        filter: brightness(1.15);
+    }
+    .calc-btn:active {
+        transform: translateY(0) scale(0.97);
+    }
+    .calc-num {
+        background: linear-gradient(145deg, #2a2a4a, #1a1a3a);
+        color: #fff;
+        border: 1px solid rgba(255,255,255,0.08);
+        text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    }
+    .calc-num:hover {
+        background: linear-gradient(145deg, #3a3a5a, #2a2a4a);
+    }
+    .calc-op {
+        background: linear-gradient(145deg, #00a8cc, #0077b6);
+        color: #fff;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+    .calc-op:hover {
+        background: linear-gradient(145deg, #00c4e6, #0088cc);
+    }
+    .calc-sci {
+        background: linear-gradient(145deg, #5a4fcf, #3d2b8e);
+        color: #fff;
+        font-size: 0.85rem;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+    .calc-sci:hover {
+        background: linear-gradient(145deg, #6b5fd8, #4d3b9e);
+    }
+    .calc-sci.active-mode {
+        background: linear-gradient(145deg, #00E5FF, #00b8d4) !important;
+        color: #000 !important;
+    }
+    .calc-clear {
+        background: linear-gradient(145deg, #ff4757, #cc2e3d);
+        color: #fff;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+    .calc-clear:hover {
+        background: linear-gradient(145deg, #ff6b7a, #dd3e4d);
+    }
+    .calc-eq {
+        background: linear-gradient(145deg, #00E5FF, #00b8d4);
+        color: #000;
+        font-size: 1.3rem;
+        text-shadow: 0 1px 0 rgba(255,255,255,0.3);
+    }
+    .calc-eq:hover {
+        background: linear-gradient(145deg, #33ebff, #00c8e6);
+    }
+    </style>
+
+    <script>
+    (function() {
+        let calcExpression = '';
+        let calcResult = '0';
+        let isDegree = true;
+
+        window.closeCalculator = function() {
+            document.getElementById('calculator-panel').style.display = 'none';
+            document.getElementById('calc-overlay').style.display = 'none';
+            // Notify Streamlit to update session state
+            fetch('/', {method: 'POST', body: JSON.stringify({close_calc: true})}).catch(()=>{});
+        };
+
+        window.calcInput = function(val) {
+            calcExpression += val;
+            updateCalcDisplay();
+        };
+
+        window.calcClear = function() {
+            calcExpression = '';
+            calcResult = '0';
+            updateCalcDisplay();
+        };
+
+        window.calcBackspace = function() {
+            calcExpression = calcExpression.slice(0, -1);
+            updateCalcDisplay();
+        };
+
+        window.calcFunc = function(func) {
+            switch(func) {
+                case 'sin': calcExpression += 'sin('; break;
+                case 'cos': calcExpression += 'cos('; break;
+                case 'tan': calcExpression += 'tan('; break;
+                case 'log': calcExpression += 'log10('; break;
+                case 'ln': calcExpression += 'ln('; break;
+                case 'sqrt': calcExpression += 'sqrt('; break;
+                case 'pow': calcExpression += '^2'; break;
+                case 'inv': calcExpression = '1/(' + calcExpression + ')'; break;
+                case 'abs': calcExpression = 'abs(' + calcExpression + ')'; break;
+                case 'fact': calcExpression = 'fact(' + calcExpression + ')'; break;
+                case 'pi': calcExpression += '3.141592653589793'; break;
+                case 'e': calcExpression += '2.718281828459045'; break;
+                case 'deg': 
+                    isDegree = !isDegree;
+                    document.getElementById('deg-btn').textContent = isDegree ? 'DEG' : 'RAD';
+                    document.getElementById('deg-btn').classList.toggle('active-mode', !isDegree);
+                    return;
+            }
+            updateCalcDisplay();
+        };
+
+        window.calcEqual = function() {
+            try {
+                let expr = calcExpression;
+
+                // Replace scientific functions with Math equivalents
+                if (isDegree) {
+                    expr = expr.replace(/sin\(/g, 'Math.sin(Math.PI/180*');
+                    expr = expr.replace(/cos\(/g, 'Math.cos(Math.PI/180*');
+                    expr = expr.replace(/tan\(/g, 'Math.tan(Math.PI/180*');
+                } else {
+                    expr = expr.replace(/sin\(/g, 'Math.sin(');
+                    expr = expr.replace(/cos\(/g, 'Math.cos(');
+                    expr = expr.replace(/tan\(/g, 'Math.tan(');
+                }
+
+                expr = expr.replace(/log10\(/g, 'Math.log10(');
+                expr = expr.replace(/ln\(/g, 'Math.log(');
+                expr = expr.replace(/sqrt\(/g, 'Math.sqrt(');
+                expr = expr.replace(/abs\(/g, 'Math.abs(');
+                expr = expr.replace(/\^2/g, '**2');
+                expr = expr.replace(/fact\(/g, 'factorial(');
+
+                // Safe evaluation
+                calcResult = Function('"use strict"; return (' + expr + ')')();
+
+                if (!isFinite(calcResult) || isNaN(calcResult)) {
+                    calcResult = 'Error';
+                } else {
+                    calcResult = parseFloat(calcResult.toPrecision(14)).toString();
+                }
+
+                calcExpression = calcResult.toString();
+                updateCalcDisplay();
+            } catch(e) {
+                calcResult = 'Error';
+                updateCalcDisplay();
+            }
+        };
+
+        function factorial(n) {
+            n = parseFloat(n);
+            if (n < 0 || !Number.isInteger(n)) return NaN;
+            if (n === 0 || n === 1) return 1;
+            let result = 1;
+            for (let i = 2; i <= n; i++) result *= i;
+            return result;
+        }
+
+        function updateCalcDisplay() {
+            const exprEl = document.getElementById('calc-expression');
+            const resEl = document.getElementById('calc-result');
+            if (exprEl) exprEl.textContent = calcExpression || '';
+            if (resEl) resEl.textContent = calcResult;
+        }
+
+        // Keyboard support
+        document.addEventListener('keydown', function(e) {
+            if (document.getElementById('calculator-panel').style.display === 'none') return;
+
+            const key = e.key;
+            if (/[0-9\.\+\-\*\/\(\)]/.test(key)) {
+                e.preventDefault();
+                calcInput(key);
+            } else if (key === 'Enter') {
+                e.preventDefault();
+                calcEqual();
+            } else if (key === 'Escape') {
+                e.preventDefault();
+                closeCalculator();
+            } else if (key === 'Backspace') {
+                e.preventDefault();
+                calcBackspace();
+            }
+        });
+
+        // Initialize display
+        updateCalcDisplay();
+    })();
+    </script>
+    """
+    st.html(calc_html)
+
+    # Botón para cerrar la calculadora desde Python
+    close_col1, close_col2, close_col3 = st.columns([1, 1, 1])
+    with close_col2:
+        if st.button("❌ Cerrar Calculadora", key="btn_cerrar_calc", use_container_width=True):
+            st.session_state["mostrar_calculadora"] = False
+            st.rerun()
