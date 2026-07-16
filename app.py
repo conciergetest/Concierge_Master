@@ -432,15 +432,11 @@ with header_col2:
 df_todas = cargar_reservaciones()
 total_reservas = len(df_todas)
 
-search_col1, search_col2 = st.columns([2.5, 8.5])
-with search_col1:
-    st.markdown(f"""<div style="background-color: #1a1a2e; border-radius: 8px; padding: 6px 10px; margin-bottom: 4px; text-align: center; border: 1px solid #00E5FF;">
-        <span style="color: #00E5FF; font-size: 0.75rem; font-weight: bold;">📊 TOTAL RESERVAS:</span>
-        <span style="color: #ffffff; font-size: 1.0rem; font-weight: bold;"> {total_reservas}</span></div>""", unsafe_allow_html=True)
-    st.markdown("<p style='color:#888; font-size:0.75rem; margin:0; padding:0;'>🔍 Búsqueda rápida...</p>", unsafe_allow_html=True)
-    busqueda = st.text_input("", placeholder="Buscar por nombre, teléfono, reserva, VIP, Relaxury...", label_visibility="collapsed", key="buscador_global")
-with search_col2: pass
 
+
+st.markdown(f"""<div style="background-color: #1a1a2e; border-radius: 8px; padding: 6px 10px; margin-bottom: 4px; text-align: center; border: 1px solid #00E5FF;">
+    <span style="color: #00E5FF; font-size: 0.75rem; font-weight: bold;">📊 TOTAL RESERVAS:</span>
+    <span style="color: #ffffff; font-size: 1.0rem; font-weight: bold;"> {total_reservas}</span></div>""", unsafe_allow_html=True)
 
 left_col, right_col = st.columns([5.0, 5.0])
 with left_col:
@@ -489,7 +485,7 @@ with left_col:
 
     # BOTONES DE ACCION
     st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
-    btn_col1, btn_col2, btn_col3, btn_col4, btn_col5, btn_col6, btn_col7, btn_col8 = st.columns(8)
+    btn_col1, btn_col2, btn_col3, btn_col4, btn_col5, btn_col6, btn_col7, btn_col8, btn_col9 = st.columns([1, 1, 1, 1, 1, 1, 1, 1, 2.5])
     if btn_col1.button("NUEVA", key="btn_nueva_v2", use_container_width=True): st.query_params["action"] = "nueva"; st.rerun()
     if btn_col2.button("EDITAR", key="btn_editar_v2", use_container_width=True): st.query_params["action"] = "editar"; st.rerun()
     if btn_col3.button("IMPORTAR", key="btn_importar_v2", use_container_width=True): st.query_params["action"] = "importar"; st.rerun()
@@ -498,6 +494,9 @@ with left_col:
     if btn_col6.button("BORRAR", key="btn_cancelar_v2", use_container_width=True): st.query_params["action"] = "cancelar"; st.rerun()
     if btn_col7.button("REPORTE", key="btn_reporte_v2", use_container_width=True): st.query_params["action"] = "reporte"; st.rerun()
     if btn_col8.button("AGENDA", key="btn_agenda_v2", use_container_width=True): st.switch_page("pages/agenda.py")
+    with btn_col9:
+        st.markdown("<p style='color:#888; font-size:0.65rem; margin:0; padding:0;'>🔍 Búsqueda rápida</p>", unsafe_allow_html=True)
+        busqueda = st.text_input("", placeholder="Buscar por nombre, teléfono, reserva, VIP, Relaxury...", label_visibility="collapsed", key="buscador_global")
 
 with right_col:
     categorias = {"VIP": "#00E5FF", "ANNIVERSARY": "#4CAF50", "BIRTHDAY": "#FF5252",
