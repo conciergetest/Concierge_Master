@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
+import subprocess
 from datetime import datetime, timedelta
 from io import BytesIO
 from supabase import create_client, Client
@@ -485,7 +486,7 @@ with left_col:
 
     # BOTONES DE ACCION
     st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
-    btn_col1, btn_col2, btn_col3, btn_col4, btn_col5, btn_col6, btn_col7, btn_col8 = st.columns([1, 1, 1, 1, 1, 1, 1, 1])
+    btn_col1, btn_col2, btn_col3, btn_col4, btn_col5, btn_col6, btn_col7, btn_col8, btn_col9 = st.columns([1,1,1,1,1,1,1,1,1])
     if btn_col1.button("NUEVA", key="btn_nueva_v2", use_container_width=True): st.query_params["action"] = "nueva"; st.rerun()
     if btn_col2.button("EDITAR", key="btn_editar_v2", use_container_width=True): st.query_params["action"] = "editar"; st.rerun()
     if btn_col3.button("IMPORTAR", key="btn_importar_v2", use_container_width=True): st.query_params["action"] = "importar"; st.rerun()
@@ -493,7 +494,12 @@ with left_col:
     if btn_col5.button("CARTA", key="btn_carta_v2", use_container_width=True): st.query_params["action"] = "carta"; st.rerun()
     if btn_col6.button("BORRAR", key="btn_cancelar_v2", use_container_width=True): st.query_params["action"] = "cancelar"; st.rerun()
     if btn_col7.button("REPORTE", key="btn_reporte_v2", use_container_width=True): st.query_params["action"] = "reporte"; st.rerun()
+    with btn_col9:
+    if st.button("🧮 CALCULADORA", use_container_width=True):
+        subprocess.Popen("calc.exe") 	
     if btn_col8.button("AGENDA", key="btn_agenda_v2", use_container_width=True): st.switch_page("pages/agenda.py")
+    if btn_col9.button("🧮 CALCULADORA", key="btn_calculadora", use_container_width=True):
+    subprocess.Popen("calc.exe")	
 
     # BARRA DE BUSQUEDA DEBAJO DE LOS BOTONES
     st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
