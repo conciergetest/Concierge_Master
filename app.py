@@ -753,9 +753,7 @@ with left_col:
                             process_calc_input("×")
                         elif char == "/":
                             process_calc_input("÷")
-                        elif char == "
-" or char == "
-":
+                        elif char == "\n" or char == "\r":
                             process_calc_input("=")
                         elif char == "":  # Backspace
                             process_calc_input("BACKSPACE")
