@@ -732,55 +732,167 @@ with left_col:
                     st.session_state.calc_reset = True
 
             # === INPUT DE TECLADO ===
-            # Usamos un text_input que captura las teclas
-            # El truco: leemos el valor, procesamos el último carácter, y limpiamos
+            # La calculadora tiene dos modos de entrada:
+            # 1. Botones en pantalla (funcionan inmediatamente)
+            # 2. Teclado físico: escribe en el campo y presiona Enter
 
-            def on_keyboard_input():
-                """Callback cuando el usuario escribe en el input de teclado"""
-                raw = st.session_state.get("calc_keyboard_input", "")
-                if raw and raw != st.session_state.get("_calc_processed_input", ""):
-                    # Obtener solo los nuevos caracteres
-                    last_processed = st.session_state.get("_calc_processed_input", "")
-                    if len(raw) > len(last_processed):
-                        new_chars = raw[len(last_processed):]
-                    else:
-                        new_chars = raw  # Si se borró, tomar todo
-
-                    # Procesar cada nuevo carácter
-                    for char in new_chars:
-                        # Mapear teclas especiales
-                        if char == "*":
-                            process_calc_input("×")
-                        elif char == "/":
-                            process_calc_input("÷")
-                        elif char == "\n" or char == "\r":
-                            process_calc_input("=")
-                        elif char == "":  # Backspace
-                            process_calc_input("BACKSPACE")
-                        elif char == "":  # Escape
-                            process_calc_input("ESCAPE")
-                        else:
-                            process_calc_input(char)
-
-                    st.session_state._calc_processed_input = raw
-
-            # Input de teclado
+            # Input de teclado - se procesa al presionar Enter
             keyboard_val = st.text_input(
                 "",
                 key="calc_keyboard_input",
                 label_visibility="collapsed",
                 placeholder="Escribe aquí o usa los botones...",
-                on_change=on_keyboard_input
             )
 
-            # Si el input cambió, procesar (esto se maneja en on_change, pero por si acaso)
+            # Procesar el input del teclado cuando cambia (al presionar Enter)
             current_input = st.session_state.get("calc_keyboard_input", "")
-            if current_input and current_input != st.session_state.get("_calc_last_checked", ""):
-                st.session_state._calc_last_checked = current_input
-                # El on_change debería haberlo procesado, pero si no:
-                if current_input != st.session_state.get("_calc_processed_input", ""):
-                    on_keyboard_input()
-                    st.rerun()
+            last_processed = st.session_state.get("_calc_processed_input", "")
+
+            if current_input and current_input != last_processed:
+                # Obtener nuevos caracteres
+                if len(current_input) > len(last_processed):
+                    new_chars = current_input[len(last_processed):]
+                else:
+                    new_chars = current_input
+
+                # Procesar cada carácter
+                for char in new_chars:
+                    if char == "*":
+                        process_calc_input("×")
+                    elif char == "/":
+                        process_calc_input("÷")
+                    elif char == "\n" or char == "\r":
+                        process_calc_input("=")
+                    elif char == "\b":
+                        process_calc_input("BACKSPACE")
+                    elif char == "\x1b":
+                        process_calc_input("ESCAPE")
+                    else:
+                        process_calc_input(char)
+
+                # Limpiar el input para permitir nueva entrada
+                st.session_state._calc_processed_input = current_input
+
+                # Si el input termina con Enter, limpiarlo
+                if current_input.endswith("\n") or current_input.endswith("\r"):
+                    st.session_state.calc_keyboard_input = ""
+                    st.session_state._calc_processed_input = ""
+
+                st.rerun()
+
+            # JavaScript para mejorar la experiencia: capturar teclas y enviar al input
+            # Esto permite que las teclas funcionen sin presionar Enter en cada una
+            keyboard_enhancer = """
+            <script>
+            (function() {
+                // Evitar inicialización múltiple
+                if (window._calcKBEnhancer) return;
+                window._calcKBEnhancer = true;
+
+                // Función para encontrar el input de la calculadora
+                function findCalcInput() {
+                    var inputs = document.querySelectorAll('input[data-testid="stTextInput"]');
+                    for (var i = 0; i < inputs.length; i++) {
+                        var inp = inputs[i];
+                        // Buscar por placeholder o por estar cerca de la calculadora
+                        if (inp.placeholder && inp.placeholder.includes('botones')) {
+                            return inp;
+                        }
+                    }
+                    return null;
+                }
+
+                // Función para simular la entrada de una tecla
+                function simulateInput(input, char) {
+                    if (!input) return;
+                    var start = input.selectionStart || input.value.length;
+                    var end = input.selectionEnd || input.value.length;
+                    var val = input.value;
+                    input.value = val.substring(0, start) + char + val.substring(end);
+                    input.selectionStart = input.selectionEnd = start + char.length;
+
+                    // Disparar eventos
+                    var evt = new Event('input', { bubbles: true });
+                    input.dispatchEvent(evt);
+
+                    // Intentar disparar onchange
+                    var changeEvt = new Event('change', { bubbles: true });
+                    input.dispatchEvent(changeEvt);
+                }
+
+                // Capturar teclas del documento
+                document.addEventListener('keydown', function(e) {
+                    // Solo si no estamos en un input de texto (excepto el de la calc)
+                    var active = document.activeElement;
+                    var isCalcInput = active && active.getAttribute('data-testid') === 'stTextInput' && 
+                                      active.placeholder && active.placeholder.includes('botones');
+
+                    // Si estamos en otro input, no interceptar
+                    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && !isCalcInput) {
+                        return;
+                    }
+
+                    var key = e.key;
+                    var charToSend = null;
+
+                    if (key >= '0' && key <= '9') {
+                        charToSend = key;
+                    } else if (key === '.') {
+                        charToSend = '.';
+                    } else if (key === '+') {
+                        charToSend = '+';
+                    } else if (key === '-') {
+                        charToSend = '-';
+                    } else if (key === '*') {
+                        charToSend = '*';
+                    } else if (key === '/') {
+                        charToSend = '/';
+                    } else if (key === 'Enter' || key === '=') {
+                        charToSend = '\n';  // Simular Enter
+                        e.preventDefault();
+                    } else if (key === 'Backspace') {
+                        // Manejar backspace especialmente
+                        e.preventDefault();
+                        var input = findCalcInput();
+                        if (input && input.value.length > 0) {
+                            input.value = input.value.slice(0, -1);
+                            var evt = new Event('input', { bubbles: true });
+                            input.dispatchEvent(evt);
+                        }
+                        return;
+                    } else if (key === 'Escape') {
+                        // Limpiar input
+                        var input = findCalcInput();
+                        if (input) {
+                            input.value = '';
+                            var evt = new Event('input', { bubbles: true });
+                            input.dispatchEvent(evt);
+                        }
+                        return;
+                    } else if (key === '%') {
+                        charToSend = '%';
+                    }
+
+                    if (charToSend !== null) {
+                        e.preventDefault();
+                        var input = findCalcInput();
+                        if (input) {
+                            simulateInput(input, charToSend);
+                            // Si era Enter, también disparar un evento de cambio
+                            if (charToSend === '\n') {
+                                setTimeout(function() {
+                                    var changeEvt = new Event('change', { bubbles: true });
+                                    input.dispatchEvent(changeEvt);
+                                }, 50);
+                            }
+                        }
+                    }
+                });
+            })();
+            </script>
+            """
+
+            st.components.v1.html(keyboard_enhancer, height=0)
 
             # Display
             st.markdown(f'<div class="calc-container"><div class="calc-display">{st.session_state.calc_display}</div>', unsafe_allow_html=True)
