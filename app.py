@@ -643,9 +643,7 @@ with left_col:
                     st.session_state.calc_reset = True
 
                 # Igual
-                elif val_str in "=
-
-":
+                elif val_str in "=":
                     calc_do_equal()
 
                 # Borrar (Backspace)
@@ -1805,4 +1803,3 @@ if not df_reservas.empty:
 
 # ============================================================
 # FIN DE LA APLICACIÓN
-# ================================================
