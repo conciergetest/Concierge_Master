@@ -1182,301 +1182,62 @@ if busqueda and busqueda.strip():
     df_reservas = df_reservas[mask]
     if len(df_reservas) == 0: st.info(f"🔍 No se encontraron resultados para: '{busqueda}'")
 
-# ============================================================
-# FUNCIÓN PARA CALCULAR NOCHES
-# ============================================================
-def calcular_noches(check_in_str, check_out_str):
-    """Calcula el número de noches entre check_in y check_out."""
-    if not check_in_str or not check_out_str or pd.isna(check_in_str) or pd.isna(check_out_str):
-        return "N/A"
-    try:
-        # Asumir formato "Jul 14" - necesitamos agregar un año
-        año_actual = datetime.now().year
-        ci = datetime.strptime(f"{check_in_str} {año_actual}", "%b %d %Y")
-        co = datetime.strptime(f"{check_out_str} {año_actual}", "%b %d %Y")
-        noches = (co - ci).days
-        return noches if noches > 0 else "N/A"
-    except:
-        return "N/A"
-
-# ============================================================
-# CSS PARA TOOLTIPS EN LA TABLA
-# ============================================================
-tooltip_css = """
-<style>
-.concierge-table-wrapper {
-    width: 100%;
-    overflow-x: auto;
-    border-radius: 8px;
-    border: 1px solid #333;
-}
-.concierge-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-family: 'Segoe UI', sans-serif;
-    font-size: 0.78rem;
-    background-color: #0a0a0a;
-    color: #e0e0e0;
-}
-.concierge-table thead {
-    background-color: #1a1a2e;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-}
-.concierge-table th {
-    padding: 8px 6px;
-    text-align: left;
-    font-weight: 600;
-    color: #00E5FF;
-    border-bottom: 2px solid #333;
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    white-space: nowrap;
-}
-.concierge-table td {
-    padding: 6px;
-    border-bottom: 1px solid #1a1a2e;
-    vertical-align: middle;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 180px;
-}
-.concierge-table tbody tr {
-    transition: background-color 0.2s ease;
-    position: relative;
-}
-.concierge-table tbody tr:hover {
-    background-color: #1a1a2e !important;
-}
-.concierge-table tbody tr:nth-child(even) {
-    background-color: #0f0f1a;
-}
-
-/* TOOLTIP STYLES */
-.tooltip-row {
-    position: relative;
-    cursor: pointer;
-}
-.tooltip-row .tooltip-content {
-    visibility: hidden;
-    opacity: 0;
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    color: #fff;
-    padding: 8px 14px;
-    border-radius: 8px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    white-space: nowrap;
-    z-index: 1000;
-    border: 1px solid #00E5FF;
-    box-shadow: 0 4px 15px rgba(0, 229, 255, 0.3);
-    transition: opacity 0.3s ease, visibility 0.3s ease;
-    pointer-events: none;
-    min-width: 120px;
-    text-align: center;
-}
-.tooltip-row .tooltip-content::after {
-    content: "";
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    margin-left: -6px;
-    border-width: 6px;
-    border-style: solid;
-    border-color: #00E5FF transparent transparent transparent;
-}
-.tooltip-row:hover .tooltip-content {
-    visibility: visible;
-    opacity: 1;
-}
-.tooltip-nights {
-    color: #FFD700;
-    font-size: 1.1rem;
-}
-.tooltip-label {
-    color: #aaa;
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-/* Botón seleccionar en cada fila */
-.btn-seleccionar {
-    background: transparent;
-    border: 1px solid #00E5FF;
-    color: #00E5FF;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 0.65rem;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-.btn-seleccionar:hover {
-    background: #00E5FF;
-    color: #000;
-}
-.btn-seleccionar-activo {
-    background: #00E5FF !important;
-    color: #000 !important;
-}
-
-/* Scrollbar styling */
-.concierge-table-wrapper::-webkit-scrollbar {
-    height: 8px;
-}
-.concierge-table-wrapper::-webkit-scrollbar-track {
-    background: #0a0a0a;
-}
-.concierge-table-wrapper::-webkit-scrollbar-thumb {
-    background: #333;
-    border-radius: 4px;
-}
-.concierge-table-wrapper::-webkit-scrollbar-thumb:hover {
-    background: #555;
-}
-</style>
-"""
-st.markdown(tooltip_css, unsafe_allow_html=True)
-
-# ============================================================
-# TABLA HTML PERSONALIZADA CON TOOLTIPS DE NOCHES
-# ============================================================
+# TABLA CON SELECCIÓN NATIVA DE STREAMLIT
 st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
 
-# Columnas a mostrar
-columnas_mostrar = ["id", "eta", "name", "qty", "room", "email", 
-                    "check_in", "check_out", "res_number", "phone", 
-                    "info", "ird", "hsk", "rate", "trans"]
-
-# Headers con nombres amigables
-headers = {
-    "id": "ID", "eta": "ETA", "name": "NAME", "qty": "QTY", 
-    "room": "ROOM", "email": "EMAIL", "check_in": "CHECK IN", 
-    "check_out": "CHECK OUT", "res_number": "RESERVATION", 
-    "phone": "PHONE", "info": "INFO", "ird": "IRD", 
-    "hsk": "HSK", "rate": "RATE", "trans": "TRANS"
+# Configurar columnas para mejor visualización - ANCHOS COMPACTOS
+# Todos los anchos en pixeles para que quepan sin scroll horizontal
+column_config = {
+    "id": st.column_config.NumberColumn("ID", width=50),
+    "eta": st.column_config.TextColumn("ETA", width=70),
+    "name": st.column_config.TextColumn("NAME", width=140),
+    "qty": st.column_config.NumberColumn("QTY", width=45),
+    "room": st.column_config.TextColumn("ROOM", width=55),
+    "email": st.column_config.TextColumn("EMAIL", width=130),
+    "check_in": st.column_config.TextColumn("CHECK IN", width=70),
+    "check_out": st.column_config.TextColumn("CHECK OUT", width=75),
+    "res_number": st.column_config.TextColumn("RESERVATION", width=90),
+    "phone": st.column_config.TextColumn("PHONE", width=110),
+    "info": st.column_config.TextColumn("INFO", width=180),
+    "ird": st.column_config.TextColumn("IRD", width=110),
+    "hsk": st.column_config.TextColumn("HSK", width=110),
+    "rate": st.column_config.TextColumn("RATE", width=60),
+    "trans": st.column_config.TextColumn("TRANS", width=80),
 }
 
-# Anchos de columnas
-anchos = {
-    "id": "45px", "eta": "65px", "name": "130px", "qty": "40px", 
-    "room": "50px", "email": "120px", "check_in": "65px", 
-    "check_out": "70px", "res_number": "85px", "phone": "100px", 
-    "info": "160px", "ird": "100px", "hsk": "100px", 
-    "rate": "55px", "trans": "75px"
-}
+# Mostrar tabla con selección de fila
+seleccion = st.dataframe(
+    df_reservas,
+    column_config=column_config,
+    use_container_width=True,
+    height=620,
+    selection_mode="single-row",
+    on_select="rerun",
+    key="tabla_principal_concierge"
+)
 
-# Construir tabla HTML
-html_table = '<div class="concierge-table-wrapper"><table class="concierge-table"><thead><tr>'
-
-# Columna de selección
-html_table += '<th style="width:50px;text-align:center;">SEL</th>'
-
-for col in columnas_mostrar:
-    html_table += f'<th style="width:{anchos.get(col, "auto")}">{headers.get(col, col)}</th>'
-html_table += '</tr></thead><tbody>'
-
-# Filas de datos
-for idx, row in df_reservas.iterrows():
-    # Calcular noches
-    noches = calcular_noches(row.get("check_in"), row.get("check_out"))
-
-    # Determinar si esta fila está seleccionada
-    fila_id = row.get("id", "")
-    fila_guardada = st.session_state.get("fila_seleccionada")
-    es_seleccionada = fila_guardada and fila_guardada.get("id") == fila_id
-
-    # Clase para fila seleccionada
-    row_class = "tooltip-row"
-    if es_seleccionada:
-        row_class += " fila-seleccionada"
-
-    html_table += f'<tr class="{row_class}" style="background-color: {"#1a3a4a" if es_seleccionada else "inherit"}">'
-
-    # Celda de selección con botón
-    btn_class = "btn-seleccionar-activo" if es_seleccionada else "btn-seleccionar"
-    html_table += f'<td style="text-align:center;"><button class="{btn_class}">{"✓" if es_seleccionada else "Sel"}</button></td>'
-
-    # Tooltip con noches
-    tooltip_html = f'<div class="tooltip-content"><div class="tooltip-label">🌙 Noches de estadía</div><div class="tooltip-nights">{noches} noche{"s" if noches != 1 else ""}</div></div>'
-
-    for col in columnas_mostrar:
-        valor = row.get(col, "")
-        if pd.isna(valor):
-            valor = ""
-        valor_str = str(valor)
-        # Truncar valores largos
-        display_val = valor_str[:25] + "..." if len(valor_str) > 25 else valor_str
-        html_table += f'<td title="{valor_str}">{display_val}</td>'
-
-    html_table += '</tr>'
-
-    # Agregar el tooltip como fila oculta o usando data attribute
-    # En realidad, el tooltip debe estar dentro de la fila, no como fila separada
-    # Lo corregimos: el tooltip va en la primera celda
-
-# Cerrar tabla
-html_table += '</tbody></table></div>'
-
-# Renderizar tabla
-st.markdown(html_table, unsafe_allow_html=True)
-
-# ============================================================
-# SELECCIÓN DE FILA MEDIANTE BOTONES STREAMLIT
-# ============================================================
-# Como no podemos usar st.dataframe con tooltips custom,
-# usamos botones Streamlit para la selección
-st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
-
-# Crear columnas para botones de selección - una fila de botones por cada fila de datos
-cols_por_fila = 8  # Número de botones por fila de Streamlit
-if len(df_reservas) > 0:
-    st.markdown("<p style='color:#00E5FF;font-size:0.75rem;margin-bottom:5px;'>🔘 Haz clic en un botón para seleccionar la reserva:</p>", unsafe_allow_html=True)
-
-    for i in range(0, len(df_reservas), cols_por_fila):
-        cols = st.columns(cols_por_fila)
-        for j in range(cols_por_fila):
-            idx = i + j
-            if idx < len(df_reservas):
-                row = df_reservas.iloc[idx]
-                fila_id = row.get("id", "")
-                nombre = row.get("name", "N/A")
-                habitacion = row.get("room", "N/A")
-                noches = calcular_noches(row.get("check_in"), row.get("check_out"))
-
-                fila_guardada = st.session_state.get("fila_seleccionada")
-                es_seleccionada = fila_guardada and fila_guardada.get("id") == fila_id
-
-                with cols[j]:
-                    btn_label = f"{'✓ ' if es_seleccionada else ''}{nombre[:12]}
-Rm:{habitacion} | 🌙{noches}n"
-                    btn_type = "primary" if es_seleccionada else "secondary"
-                    if st.button(btn_label, key=f"sel_btn_{fila_id}", type=btn_type, use_container_width=True):
-                        st.session_state["fila_seleccionada"] = row.to_dict()
-                        st.session_state["fila_seleccionada_idx"] = idx
-                        st.rerun()
+# Guardar fila seleccionada en session_state
+# Solo actualizar si hay una nueva selección; no borrar la anterior si no hay selección
+# (la selección se pierde al hacer clic en botones que cambian query_params)
+if seleccion and seleccion.selection.rows:
+    idx = seleccion.selection.rows[0]
+    st.session_state["fila_seleccionada"] = df_reservas.iloc[idx].to_dict()
+    st.session_state["fila_seleccionada_idx"] = idx
 
 # Mostrar fila seleccionada actualmente
 fila_guardada = st.session_state.get("fila_seleccionada")
 if fila_guardada:
-    noches_sel = calcular_noches(fila_guardada.get("check_in"), fila_guardada.get("check_out"))
-    st.markdown(f"""<div style="background-color: #1a1a2e; border-radius: 8px; padding: 8px 12px; margin: 5px 0; border: 1px solid #00E5FF;">
+    st.markdown(f"""<div style="background-color: #1a1a2e; border-radius: 8px; padding: 8px 12px; margin: 5px 0; border: 1px solid #00E5FF; display: flex; align-items: center; gap: 10px;">
         <span style="color: #00E5FF; font-size: 0.8rem;">✅ SELECCIONADO:</span>
         <span style="color: #fff; font-size: 0.85rem; font-weight: bold;">{fila_guardada.get('name', 'N/A')}</span>
-        <span style="color: #888; font-size: 0.75rem;">| Room: {fila_guardada.get('room', 'N/A')} | ID: {fila_guardada.get('id', 'N/A')} | 🌙 {noches_sel} noche{'s' if noches_sel != 1 else ''}</span>
+        <span style="color: #888; font-size: 0.75rem;">| Room: {fila_guardada.get('room', 'N/A')} | ID: {fila_guardada.get('id', 'N/A')}</span>
     </div>""", unsafe_allow_html=True)
 else:
-    st.markdown("""<div style="background-color: #1a0d0d; border-radius: 8px; padding: 8px 12px; margin: 5px 0; border: 1px solid #f44336;">
-        <span style="color: #f44336; font-size: 0.8rem;">⚠️ Ninguna fila seleccionada. Haz clic en un botón de selección arriba.</span>
+    st.markdown("""<div style="background-color: #1a0d0d; border-radius: 8px; padding: 8px 12px; margin: 5px 0; border: 1px solid #7d2e2e;">
+        <span style="color: #f44336; font-size: 0.8rem;">⚠️ Ninguna fila seleccionada. Haz clic en una fila de la tabla para editar o borrar.</span>
     </div>""", unsafe_allow_html=True)
 
+# ============================================================
 # LÓGICA DE BORRADO CON CLAVE
 # ============================================================
 if st.query_params.get("action") == "cancelar":
@@ -1499,4 +1260,137 @@ if st.query_params.get("action") == "cancelar":
     else:
         st.error("Por favor, selecciona una fila en la tabla primero.")
         if st.button("↩️ REGRESAR", key="regresar_cancelar_error"):
-            st.query_params.clear(); st.rer
+            st.query_params.clear(); st.rerun()
+
+
+# ============================================================
+# SECCIÓN DE BOTONES DE SELECCIÓN RÁPIDA (VISTA ALTERNATIVA)
+# ============================================================
+
+if st.session_state.get("mostrar_botones", False):
+    st.subheader("📋 Selección Rápida")
+
+    nombres_lista = df_reservas['name'].dropna().unique().tolist() if not df_reservas.empty else []
+
+    for idx, nombre in enumerate(nombres_lista):
+        es_seleccionada = st.session_state.get("sel_nombre") == nombre
+        # CORRECCIÓN: Separar el condicional fuera de la f-string
+        check_mark = "✓ " if es_seleccionada else ""
+        btn_label = f"{check_mark}{nombre[:12]}"
+
+        if st.button(btn_label, key=f"sel_btn_{idx}", 
+                    type="primary" if es_seleccionada else "secondary",
+                    use_container_width=True):
+            st.session_state["sel_nombre"] = nombre
+            st.rerun()
+
+# ============================================================
+# CÁLCULO DE NOCHES Y TOOLTIP
+# ============================================================
+
+def calcular_noches(check_in_str, check_out_str):
+    """Calcula noches entre check_in y check_out."""
+    try:
+        from datetime import datetime
+        año = datetime.now().year
+        fecha_in = datetime.strptime(f"{check_in_str} {año}", "%b %d %Y")
+        fecha_out = datetime.strptime(f"{check_out_str} {año}", "%b %d %Y")
+        if fecha_out < fecha_in:
+            fecha_out = datetime.strptime(f"{check_out_str} {año + 1}", "%b %d %Y")
+        return max(0, (fecha_out - fecha_in).days)
+    except Exception:
+        return 0
+
+# Agregar columna de noches al DataFrame
+if not df_reservas.empty and 'check_in' in df_reservas.columns and 'check_out' in df_reservas.columns:
+    df_reservas['noches'] = df_reservas.apply(
+        lambda r: calcular_noches(str(r.get('check_in', '')), str(r.get('check_out', ''))), 
+        axis=1
+    )
+
+# ============================================================
+# TABLA PRINCIPAL CON TOOLTIP DE NOCHES
+# ============================================================
+
+if not df_reservas.empty:
+    st.markdown("### 📊 Reservaciones")
+
+    # Configurar columnas con tooltip (help) mostrando info de noches
+    col_config = {
+        "name": st.column_config.TextColumn(
+            "Guest Name",
+            help="Nombre del huésped",
+            width="medium"
+        ),
+        "room": st.column_config.TextColumn(
+            "Room",
+            help="Número de habitación",
+            width="small"
+        ),
+        "check_in": st.column_config.TextColumn(
+            "Check In",
+            help="Fecha de llegada",
+            width="small"
+        ),
+        "check_out": st.column_config.TextColumn(
+            "Check Out",
+            help="Fecha de salida",
+            width="small"
+        ),
+        "noches": st.column_config.NumberColumn(
+            "🌙 Nights",
+            help="Número de noches de estadía (calculado automáticamente)",
+            width="small",
+            format="%d"
+        ),
+        "eta": st.column_config.TextColumn(
+            "ETA",
+            help="Hora estimada de llegada",
+            width="small"
+        ),
+        "res_number": st.column_config.TextColumn(
+            "Reservation",
+            help="Número de confirmación",
+            width="medium"
+        ),
+        "info": st.column_config.TextColumn(
+            "Notes",
+            help="Información especial (VIP, Birthday, Honeymoon, etc.)",
+            width="large"
+        ),
+        "rate": st.column_config.TextColumn(
+            "Rate",
+            help="Tarifa",
+            width="small"
+        ),
+        "trans": st.column_config.TextColumn(
+            "Transport",
+            help="Información de transporte",
+            width="medium"
+        ),
+    }
+
+    # Seleccionar columnas disponibles
+    cols_mostrar = [c for c in ["name", "room", "check_in", "check_out", "noches", 
+                                 "eta", "res_number", "info", "rate", "trans"] 
+                    if c in df_reservas.columns]
+
+    st.dataframe(
+        df_reservas[cols_mostrar],
+        column_config=col_config,
+        use_container_width=True,
+        hide_index=True
+    )
+
+    # Métricas resumen
+    total_noches = int(df_reservas['noches'].sum()) if 'noches' in df_reservas.columns else 0
+    promedio_noches = df_reservas['noches'].mean() if 'noches' in df_reservas.columns else 0
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Total Reservas", len(df_reservas))
+    c2.metric("Total Noches", total_noches)
+    c3.metric("Promedio Noches", f"{promedio_noches:.1f}")
+
+# ============================================================
+# FIN DE LA APLICACIÓN
+# ============================================================
