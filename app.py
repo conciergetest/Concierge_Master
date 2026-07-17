@@ -319,6 +319,7 @@ button[key="btn_carta_v2"] { background-color: #9C27B0 !important; color: #fffff
 button[key="btn_cancelar_v2"] { background-color: #f44336 !important; color: #ffffff !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
 button[key="btn_reporte_v2"] { background-color: #FFC107 !important; color: #000000 !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
 button[key="btn_agenda_v2"] { background-color: #00BCD4 !important; color: #000000 !important; font-weight: bold !important; font-size: 0.65rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
+button[key="btn_calc_v2"] { background-color: #FF9800 !important; color: #FFFFFF !important; font-weight: bold !important; font-size: 1rem !important; border: none !important; border-radius: 6px !important; padding: 4px 2px !important; min-height: 28px !important; }
 button[key="btn_procesar_excel"] { background-color: #00E5FF !important; color: #000000 !important; font-weight: bold !important; font-size: 0.85rem !important; border: none !important; border-radius: 8px !important; padding: 10px 20px !important; min-height: 40px !important; }
 .ag-root-wrapper { background-color: #101010 !important; }
 .ag-cell { color: white !important; background-color: #101010 !important; }
@@ -487,7 +488,7 @@ with left_col:
 
     # BOTONES DE ACCION
     st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
-    btn_col1, btn_col2, btn_col3, btn_col4, btn_col5, btn_col6, btn_col7, btn_col8 = st.columns([1, 1, 1, 1, 1, 1, 1, 1])
+    btn_col1, btn_col2, btn_col3, btn_col4, btn_col5, btn_col6, btn_col7, btn_col8, btn_col9 = st.columns([1, 1, 1, 1, 1, 1, 1, 1, 1])
     if btn_col1.button("NUEVA", key="btn_nueva_v2", use_container_width=True): st.query_params["action"] = "nueva"; st.rerun()
     if btn_col2.button("EDITAR", key="btn_editar_v2", use_container_width=True): st.query_params["action"] = "editar"; st.rerun()
     if btn_col3.button("IMPORTAR", key="btn_importar_v2", use_container_width=True): st.query_params["action"] = "importar"; st.rerun()
@@ -496,9 +497,301 @@ with left_col:
     if btn_col6.button("BORRAR", key="btn_cancelar_v2", use_container_width=True): st.query_params["action"] = "cancelar"; st.rerun()
     if btn_col7.button("REPORTE", key="btn_reporte_v2", use_container_width=True): st.query_params["action"] = "reporte"; st.rerun()
     if btn_col8.button("AGENDA", key="btn_agenda_v2", use_container_width=True): st.switch_page("pages/agenda.py")
+    if btn_col9.button("🧮", key="btn_calc_v2", use_container_width=True): 
+        st.session_state["mostrar_calculadora"] = not st.session_state.get("mostrar_calculadora", False)
+        st.rerun()
 
     # BARRA DE BUSQUEDA DEBAJO DE LOS BOTONES
     st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
+
+    # === CALCULADORA DESPLEGABLE ===
+    # === CALCULADORA DESPLEGABLE ===
+    if st.session_state.get("mostrar_calculadora", False):
+        with st.container():
+            st.markdown("""
+            <style>
+            .calc-container {
+                background: #1e1e2e;
+                border-radius: 12px;
+                padding: 15px;
+                max-width: 320px;
+                margin: 0 auto 10px auto;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            }
+            .calc-display {
+                background: #2d2d44;
+                border-radius: 8px;
+                padding: 15px;
+                margin-bottom: 12px;
+                text-align: right;
+                font-size: 2rem;
+                font-weight: bold;
+                color: white;
+                min-height: 50px;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+                border: 1px solid #3d3d5c;
+            }
+            .calc-row {
+                display: flex;
+                gap: 8px;
+                margin-bottom: 8px;
+            }
+            .calc-btn {
+                flex: 1;
+                padding: 12px 0;
+                border: none;
+                border-radius: 6px;
+                font-size: 1.1rem;
+                font-weight: bold;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            .calc-btn:hover {
+                transform: scale(1.05);
+            }
+            .calc-btn-num {
+                background: #3d3d5c;
+                color: white;
+            }
+            .calc-btn-num:hover {
+                background: #4d4d6c;
+            }
+            .calc-btn-op {
+                background: #505050;
+                color: white;
+            }
+            .calc-btn-op:hover {
+                background: #606060;
+            }
+            .calc-btn-eq {
+                background: #00BCD4;
+                color: black;
+            }
+            .calc-btn-eq:hover {
+                background: #00E5FF;
+            }
+            .calc-btn-clear {
+                background: #ff4444;
+                color: white;
+            }
+            .calc-btn-clear:hover {
+                background: #ff6666;
+            }
+            .calc-btn-special {
+                background: #666;
+                color: white;
+                font-size: 0.9rem;
+            }
+            .calc-btn-special:hover {
+                background: #777;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+
+            # Inicializar estado de calculadora si no existe
+            if "calc_display" not in st.session_state:
+                st.session_state.calc_display = "0"
+            if "calc_prev" not in st.session_state:
+                st.session_state.calc_prev = ""
+            if "calc_op" not in st.session_state:
+                st.session_state.calc_op = ""
+            if "calc_reset" not in st.session_state:
+                st.session_state.calc_reset = False
+
+            # Display
+            st.markdown(f'<div class="calc-container"><div class="calc-display">{st.session_state.calc_display}</div>', unsafe_allow_html=True)
+
+            # Funciones de la calculadora - CORREGIDO: val se convierte a str para comparación
+            def calc_input(val):
+                val_str = str(val)
+                if st.session_state.calc_reset:
+                    st.session_state.calc_display = ""
+                    st.session_state.calc_reset = False
+                if st.session_state.calc_display == "0" and val_str != ".":
+                    st.session_state.calc_display = val_str
+                else:
+                    st.session_state.calc_display += val_str
+
+            def calc_op(op):
+                st.session_state.calc_prev = st.session_state.calc_display
+                st.session_state.calc_op = op
+                st.session_state.calc_reset = True
+
+            def calc_equal():
+                try:
+                    prev = float(st.session_state.calc_prev) if st.session_state.calc_prev else 0
+                    curr = float(st.session_state.calc_display) if st.session_state.calc_display else 0
+                    op = st.session_state.calc_op
+
+                    if op == "+":
+                        result = prev + curr
+                    elif op == "-":
+                        result = prev - curr
+                    elif op == "×":
+                        result = prev * curr
+                    elif op == "÷":
+                        result = prev / curr if curr != 0 else "Error"
+                    elif op == "%":
+                        result = prev * (curr / 100)
+                    elif op == "x²":
+                        result = curr ** 2
+                    elif op == "√":
+                        result = curr ** 0.5 if curr >= 0 else "Error"
+                    elif op == "1/x":
+                        result = 1 / curr if curr != 0 else "Error"
+                    else:
+                        result = curr
+
+                    if result == "Error":
+                        st.session_state.calc_display = "Error"
+                    else:
+                        # Formatear resultado
+                        if result == int(result):
+                            st.session_state.calc_display = str(int(result))
+                        else:
+                            st.session_state.calc_display = str(round(result, 8)).rstrip('0').rstrip('.')
+                    st.session_state.calc_reset = True
+                except:
+                    st.session_state.calc_display = "Error"
+                    st.session_state.calc_reset = True
+
+            def calc_clear():
+                st.session_state.calc_display = "0"
+                st.session_state.calc_prev = ""
+                st.session_state.calc_op = ""
+                st.session_state.calc_reset = False
+
+            def calc_backspace():
+                if len(st.session_state.calc_display) > 1:
+                    st.session_state.calc_display = st.session_state.calc_display[:-1]
+                else:
+                    st.session_state.calc_display = "0"
+
+            # Fila 1: %, CE, C, ⌫
+            cols = st.columns(4)
+            with cols[0]:
+                if st.button("%", key="calc_pct", use_container_width=True):
+                    calc_op("%")
+                    st.rerun()
+            with cols[1]:
+                if st.button("CE", key="calc_ce", use_container_width=True):
+                    st.session_state.calc_display = "0"
+                    st.rerun()
+            with cols[2]:
+                if st.button("C", key="calc_c", use_container_width=True):
+                    calc_clear()
+                    st.rerun()
+            with cols[3]:
+                if st.button("⌫", key="calc_del", use_container_width=True):
+                    calc_backspace()
+                    st.rerun()
+
+            # Fila 2: 1/x, x², √, ÷
+            cols2 = st.columns(4)
+            with cols2[0]:
+                if st.button("¹/ₓ", key="calc_inv", use_container_width=True):
+                    calc_op("1/x")
+                    calc_equal()
+                    st.rerun()
+            with cols2[1]:
+                if st.button("x²", key="calc_sq", use_container_width=True):
+                    calc_op("x²")
+                    calc_equal()
+                    st.rerun()
+            with cols2[2]:
+                if st.button("√", key="calc_sqrt", use_container_width=True):
+                    calc_op("√")
+                    calc_equal()
+                    st.rerun()
+            with cols2[3]:
+                if st.button("÷", key="calc_div", use_container_width=True):
+                    calc_op("÷")
+                    st.rerun()
+
+            # Fila 3: 7, 8, 9, ×
+            cols3 = st.columns(4)
+            with cols3[0]:
+                if st.button("7", key="calc_7", use_container_width=True):
+                    calc_input(7)
+                    st.rerun()
+            with cols3[1]:
+                if st.button("8", key="calc_8", use_container_width=True):
+                    calc_input(8)
+                    st.rerun()
+            with cols3[2]:
+                if st.button("9", key="calc_9", use_container_width=True):
+                    calc_input(9)
+                    st.rerun()
+            with cols3[3]:
+                if st.button("×", key="calc_mul", use_container_width=True):
+                    calc_op("×")
+                    st.rerun()
+
+            # Fila 4: 4, 5, 6, -
+            cols4 = st.columns(4)
+            with cols4[0]:
+                if st.button("4", key="calc_4", use_container_width=True):
+                    calc_input(4)
+                    st.rerun()
+            with cols4[1]:
+                if st.button("5", key="calc_5", use_container_width=True):
+                    calc_input(5)
+                    st.rerun()
+            with cols4[2]:
+                if st.button("6", key="calc_6", use_container_width=True):
+                    calc_input(6)
+                    st.rerun()
+            with cols4[3]:
+                if st.button("−", key="calc_sub", use_container_width=True):
+                    calc_op("-")
+                    st.rerun()
+
+            # Fila 5: 1, 2, 3, +
+            cols5 = st.columns(4)
+            with cols5[0]:
+                if st.button("1", key="calc_1", use_container_width=True):
+                    calc_input(1)
+                    st.rerun()
+            with cols5[1]:
+                if st.button("2", key="calc_2", use_container_width=True):
+                    calc_input(2)
+                    st.rerun()
+            with cols5[2]:
+                if st.button("3", key="calc_3", use_container_width=True):
+                    calc_input(3)
+                    st.rerun()
+            with cols5[3]:
+                if st.button("+", key="calc_add", use_container_width=True):
+                    calc_op("+")
+                    st.rerun()
+
+            # Fila 6: +/-, 0, ., =
+            cols6 = st.columns(4)
+            with cols6[0]:
+                if st.button("+/-", key="calc_sign", use_container_width=True):
+                    if st.session_state.calc_display.startswith("-"):
+                        st.session_state.calc_display = st.session_state.calc_display[1:]
+                    else:
+                        st.session_state.calc_display = "-" + st.session_state.calc_display
+                    st.rerun()
+            with cols6[1]:
+                if st.button("0", key="calc_0", use_container_width=True):
+                    calc_input(0)
+                    st.rerun()
+            with cols6[2]:
+                if st.button(".", key="calc_dot", use_container_width=True):
+                    if "." not in st.session_state.calc_display:
+                        st.session_state.calc_display += "."
+                    st.rerun()
+            with cols6[3]:
+                if st.button("=", key="calc_eq", use_container_width=True, type="primary"):
+                    calc_equal()
+                    st.rerun()
+
+            st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+
     search_col1, search_col2 = st.columns([1.5, 8.5])
     with search_col1:
         st.markdown("<p style='color:#888; font-size:0.75rem; margin:0; padding:4px 0 0 0; text-align:right;'>🔍 Búsqueda rápida</p>", unsafe_allow_html=True)
@@ -1393,4 +1686,4 @@ if not df_reservas.empty:
 
 # ============================================================
 # FIN DE LA APLICACIÓN
-# ============================================================
+# ================================================
