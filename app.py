@@ -505,47 +505,16 @@ with left_col:
     st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
 
     # === CALCULADORA DESPLEGABLE ===
-    # === CALCULADORA DESPLEGABLE ===
-    # === CALCULADORA DESPLEGABLE ===
     if st.session_state.get("mostrar_calculadora", False):
-        # CSS de la calculadora
         st.markdown("""
         <style>
-        .calc-container {
-            background: #1e1e2e;
-            border-radius: 16px;
-            padding: 20px;
-            margin: 10px 0;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-            border: 1px solid #2a2a3e;
-        }
-        .calc-display {
-            background: #2a2a3e;
-            border-radius: 12px;
-            padding: 20px;
-            font-size: 2.5rem;
-            font-weight: 600;
-            text-align: right;
-            color: #00E5FF;
-            margin-bottom: 16px;
-            min-height: 60px;
-            word-break: break-all;
-            font-family: 'Segoe UI', monospace;
-            border: 1px solid #3a3a4e;
-        }
-        .keyboard-hint {
-            text-align: center;
-            color: #888;
-            font-size: 0.75rem;
-            margin-top: 8px;
-            padding: 6px;
-            background: #2a2a3e;
-            border-radius: 6px;
-        }
+        .calc-container { background-color: #1a1a2e; border-radius: 12px; padding: 12px; margin-bottom: 8px; border: 1px solid #2a2a3e; }
+        .calc-display { background-color: #2a2a3e; border-radius: 8px; padding: 12px 16px; font-size: 1.8rem; font-weight: bold; color: #00E5FF; text-align: right; margin-bottom: 10px; min-height: 50px; word-wrap: break-word; overflow-wrap: break-word; font-family: 'Courier New', monospace; }
+        .keyboard-hint { color: #888; font-size: 0.7rem; text-align: center; margin-top: 6px; padding: 4px; background-color: #2a2a3e; border-radius: 4px; }
+        .keyboard-hint kbd { background-color: #444; border: 1px solid #666; border-radius: 3px; padding: 1px 4px; font-family: monospace; color: #ccc; }
         </style>
         """, unsafe_allow_html=True)
 
-        # Inicializar estado de la calculadora
         if "calc_display" not in st.session_state:
             st.session_state.calc_display = "0"
         if "calc_prev" not in st.session_state:
@@ -554,285 +523,135 @@ with left_col:
             st.session_state.calc_op = None
         if "calc_reset" not in st.session_state:
             st.session_state.calc_reset = False
-        if "calc_key_buffer" not in st.session_state:
-            st.session_state.calc_key_buffer = ""
 
         def process_calc_input(val):
-            """Procesa un input de la calculadora (botón o teclado)"""
             display = st.session_state.calc_display
-            prev = st.session_state.calc_prev
-            op = st.session_state.calc_op
-            reset = st.session_state.calc_reset
-
-            # Resetear display si es necesario
-            if reset and val not in ["+", "-", "×", "÷", "=", "%", "1/x", "x²", "√"]:
+            if st.session_state.calc_reset and val not in ["=", "CE", "C", "BACKSPACE", "⌫"]:
                 display = "0"
                 st.session_state.calc_reset = False
 
-            # Manejar números y punto decimal
-            if val in "0123456789.":
-                if display == "0" and val != ".":
-                    display = val
-                elif val == "." and "." in display:
-                    pass  # No permitir dos puntos
-                else:
-                    display += val
-
-            # Operadores
+            if val in "0123456789":
+                display = val if display == "0" or display == "Error" else display + val
+            elif val == ".":
+                if "." not in display: display += "."
             elif val in ["+", "-", "×", "÷"]:
-                if prev is not None and not reset:
-                    # Calcular resultado previo
-                    try:
-                        if op == "+":
-                            result = prev + float(display)
-                        elif op == "-":
-                            result = prev - float(display)
-                        elif op == "×":
-                            result = prev * float(display)
-                        elif op == "÷":
-                            result = prev / float(display) if float(display) != 0 else float('inf')
-                        display = str(result)
-                        if display.endswith(".0"):
-                            display = display[:-2]
-                    except:
-                        display = "Error"
-                st.session_state.calc_prev = float(display) if display != "Error" else 0
+                st.session_state.calc_prev = float(display)
                 st.session_state.calc_op = val
                 st.session_state.calc_reset = True
-
-            # Igual
             elif val == "=":
-                if prev is not None and op is not None:
+                if st.session_state.calc_prev is not None and st.session_state.calc_op is not None:
                     try:
-                        if op == "+":
-                            result = prev + float(display)
-                        elif op == "-":
-                            result = prev - float(display)
-                        elif op == "×":
-                            result = prev * float(display)
-                        elif op == "÷":
-                            result = prev / float(display) if float(display) != 0 else float('inf')
-                        display = str(result)
-                        if display.endswith(".0"):
-                            display = display[:-2]
-                    except:
-                        display = "Error"
-                st.session_state.calc_prev = None
-                st.session_state.calc_op = None
-                st.session_state.calc_reset = True
-
-            # Funciones especiales
+                        current = float(display)
+                        if st.session_state.calc_op == "+": result = st.session_state.calc_prev + current
+                        elif st.session_state.calc_op == "-": result = st.session_state.calc_prev - current
+                        elif st.session_state.calc_op == "×": result = st.session_state.calc_prev * current
+                        elif st.session_state.calc_op == "÷": result = "Error" if current == 0 else st.session_state.calc_prev / current
+                        else: result = current
+                        display = "Error" if result == "Error" else (str(int(result)) if isinstance(result, float) and result.is_integer() else str(round(result, 10)).rstrip('0').rstrip('.'))
+                    except: display = "Error"
+                    st.session_state.calc_prev = None
+                    st.session_state.calc_op = None
+                    st.session_state.calc_reset = True
             elif val == "C":
-                display = "0"
-                st.session_state.calc_prev = None
-                st.session_state.calc_op = None
-                st.session_state.calc_reset = False
-            elif val == "CE":
-                display = "0"
-            elif val == "⌫" or val == "BACKSPACE":
-                if len(display) > 1:
-                    display = display[:-1]
-                else:
-                    display = "0"
-            elif val == "±":
-                if display != "0" and display != "Error":
-                    if display.startswith("-"):
-                        display = display[1:]
-                    else:
-                        display = "-" + display
+                display, st.session_state.calc_prev, st.session_state.calc_op, st.session_state.calc_reset = "0", None, None, False
+            elif val == "CE": display = "0"
+            elif val in ["⌫", "BACKSPACE"]: display = display[:-1] if len(display) > 1 else "0"
+            elif val == "±" and display not in ["0", "Error"]: display = display[1:] if display.startswith("-") else "-" + display
             elif val == "%":
-                try:
-                    display = str(float(display) / 100)
-                    if display.endswith(".0"):
-                        display = display[:-2]
-                except:
-                    display = "Error"
+                try: display = str(float(display) / 100).rstrip('0').rstrip('.')
+                except: display = "Error"
             elif val == "1/x":
-                try:
-                    display = str(1 / float(display))
-                    if display.endswith(".0"):
-                        display = display[:-2]
-                except:
-                    display = "Error"
+                try: display = str(1 / float(display)).rstrip('0').rstrip('.')
+                except: display = "Error"
             elif val == "x²":
-                try:
-                    display = str(float(display) ** 2)
-                    if display.endswith(".0"):
-                        display = display[:-2]
-                except:
-                    display = "Error"
+                try: display = str(float(display) ** 2).rstrip('0').rstrip('.')
+                except: display = "Error"
             elif val == "√":
-                try:
-                    display = str(float(display) ** 0.5)
-                    if display.endswith(".0"):
-                        display = display[:-2]
-                except:
-                    display = "Error"
-
+                try: display = str(float(display) ** 0.5).rstrip('0').rstrip('.')
+                except: display = "Error"
             st.session_state.calc_display = display
 
-        # === INPUT DE TECLADO ===
-        # Usamos un text_input que se procesa al presionar Enter
-        # El truco: leemos el valor, procesamos los caracteres, y limpiamos
+        # === JAVASCRIPT PARA CAPTURA DE TECLADO ===
+        keyboard_js = """
+        <script>
+        (function() {
+            const keyMap = {
+                '0':'0','1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9',
+                '.':'.',',':'.','+':'+','-':'-','*':'×','x':'×','X':'×','/':'÷',
+                'Enter':'=','=':'=','Backspace':'BACKSPACE','Escape':'C','c':'C','C':'C',
+                '%':'%','^':'x²','r':'√','R':'√','i':'1/x','I':'1/x','s':'±','S':'±','Delete':'CE'
+            };
+            let isProcessing = false;
+            function triggerStreamlitUpdate(value) {
+                const inputs = document.querySelectorAll('input[type="text"]');
+                for (let input of inputs) {
+                    if (input.placeholder && input.placeholder.includes('teclado')) {
+                        const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                        setter.call(input, value);
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
+                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                        return true;
+                    }
+                }
+                return false;
+            }
+            document.addEventListener('keydown', function(e) {
+                const active = document.activeElement;
+                const isCalcInput = active && active.placeholder && active.placeholder.includes('teclado');
+                if (!isCalcInput && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
+                const mapped = keyMap[e.key];
+                if (mapped && !isProcessing) {
+                    e.preventDefault();
+                    isProcessing = true;
+                    triggerStreamlitUpdate(mapped);
+                    setTimeout(() => { isProcessing = false; }, 100);
+                }
+            });
+        })();
+        </script>
+        """
+        st.components.v1.html(keyboard_js, height=0)
 
         def on_keyboard_input():
-            """Callback cuando el usuario escribe en el input de teclado"""
             raw = st.session_state.get("calc_keyboard_input", "")
             if raw:
-                # Procesar cada carácter
                 for char in raw:
-                    if char == "*":
-                        process_calc_input("×")
-                    elif char == "/":
-                        process_calc_input("÷")
-                    elif char == "\n" or char == "\r":
-                        process_calc_input("=")
-                    elif char == "\b":
-                        process_calc_input("BACKSPACE")
-                    elif char == "\x1b":
-                        process_calc_input("C")
-                    else:
-                        process_calc_input(char)
-                # Limpiar el input
+                    if char in "*xX": process_calc_input("×")
+                    elif char == "/": process_calc_input("÷")
+                    elif char in "\n\r": process_calc_input("=")
+                    elif char == "\b": process_calc_input("BACKSPACE")
+                    elif char == "\x1b": process_calc_input("C")
+                    elif char == "^": process_calc_input("x²")
+                    elif char in "rR": process_calc_input("√")
+                    elif char in "iI": process_calc_input("1/x")
+                    elif char in "sS": process_calc_input("±")
+                    else: process_calc_input(char)
                 st.session_state.calc_keyboard_input = ""
 
-        # Input de teclado
-        keyboard_val = st.text_input(
-            "",
-            key="calc_keyboard_input",
-            label_visibility="collapsed",
-            placeholder="Escribe aquí o usa los botones...",
-            on_change=on_keyboard_input
-        )
+        st.text_input("", key="calc_keyboard_input", label_visibility="collapsed",
+                      placeholder="Haz clic aquí y escribe, o usa los botones...",
+                      on_change=on_keyboard_input)
 
-        # Display
         st.markdown(f'<div class="calc-container"><div class="calc-display">{st.session_state.calc_display}</div>', unsafe_allow_html=True)
 
-        # === BOTONES DE LA CALCULADORA ===
-        # Fila 1: %, CE, C, ⌫
-        c1, c2, c3, c4 = st.columns(4)
-        with c1:
-            if st.button("%", key="calc_pct", use_container_width=True):
-                process_calc_input("%")
-                st.rerun()
-        with c2:
-            if st.button("CE", key="calc_ce", use_container_width=True):
-                process_calc_input("CE")
-                st.rerun()
-        with c3:
-            if st.button("C", key="calc_c", use_container_width=True):
-                process_calc_input("C")
-                st.rerun()
-        with c4:
-            if st.button("⌫", key="calc_del", use_container_width=True):
-                process_calc_input("⌫")
-                st.rerun()
+        # Botones (filas 1-6)
+        for row in [["%","CE","C","⌫"], ["¹/x","x²","√","÷"], ["7","8","9","×"], ["4","5","6","−"], ["1","2","3","+"], ["±","0",".","="]]:
+            cols = st.columns(4)
+            for i, btn in enumerate(row):
+                with cols[i]:
+                    if st.button(btn, key=f"calc_{btn}", use_container_width=True, type="primary" if btn == "=" else "secondary"):
+                        process_calc_input(btn)
+                        st.rerun()
 
-        # Fila 2: 1/x, x², √, ÷
-        c1, c2, c3, c4 = st.columns(4)
-        with c1:
-            if st.button("¹/x", key="calc_inv", use_container_width=True):
-                process_calc_input("1/x")
-                st.rerun()
-        with c2:
-            if st.button("x²", key="calc_sq", use_container_width=True):
-                process_calc_input("x²")
-                st.rerun()
-        with c3:
-            if st.button("√", key="calc_sqrt", use_container_width=True):
-                process_calc_input("√")
-                st.rerun()
-        with c4:
-            if st.button("÷", key="calc_div", use_container_width=True):
-                process_calc_input("÷")
-                st.rerun()
-
-        # Fila 3: 7, 8, 9, ×
-        c1, c2, c3, c4 = st.columns(4)
-        with c1:
-            if st.button("7", key="calc_7", use_container_width=True):
-                process_calc_input("7")
-                st.rerun()
-        with c2:
-            if st.button("8", key="calc_8", use_container_width=True):
-                process_calc_input("8")
-                st.rerun()
-        with c3:
-            if st.button("9", key="calc_9", use_container_width=True):
-                process_calc_input("9")
-                st.rerun()
-        with c4:
-            if st.button("×", key="calc_mul", use_container_width=True):
-                process_calc_input("×")
-                st.rerun()
-
-        # Fila 4: 4, 5, 6, −
-        c1, c2, c3, c4 = st.columns(4)
-        with c1:
-            if st.button("4", key="calc_4", use_container_width=True):
-                process_calc_input("4")
-                st.rerun()
-        with c2:
-            if st.button("5", key="calc_5", use_container_width=True):
-                process_calc_input("5")
-                st.rerun()
-        with c3:
-            if st.button("6", key="calc_6", use_container_width=True):
-                process_calc_input("6")
-                st.rerun()
-        with c4:
-            if st.button("−", key="calc_sub", use_container_width=True):
-                process_calc_input("-")
-                st.rerun()
-
-        # Fila 5: 1, 2, 3, +
-        c1, c2, c3, c4 = st.columns(4)
-        with c1:
-            if st.button("1", key="calc_1", use_container_width=True):
-                process_calc_input("1")
-                st.rerun()
-        with c2:
-            if st.button("2", key="calc_2", use_container_width=True):
-                process_calc_input("2")
-                st.rerun()
-        with c3:
-            if st.button("3", key="calc_3", use_container_width=True):
-                process_calc_input("3")
-                st.rerun()
-        with c4:
-            if st.button("+", key="calc_add", use_container_width=True):
-                process_calc_input("+")
-                st.rerun()
-
-        # Fila 6: ±, 0, ., =
-        c1, c2, c3, c4 = st.columns(4)
-        with c1:
-            if st.button("±", key="calc_sign", use_container_width=True):
-                process_calc_input("±")
-                st.rerun()
-        with c2:
-            if st.button("0", key="calc_0", use_container_width=True):
-                process_calc_input("0")
-                st.rerun()
-        with c3:
-            if st.button(".", key="calc_dot", use_container_width=True):
-                process_calc_input(".")
-                st.rerun()
-        with c4:
-            if st.button("=", key="calc_eq", use_container_width=True, type="primary"):
-                process_calc_input("=")
-                st.rerun()
-
-        # Hint de teclado
-        st.markdown('<div class="keyboard-hint">⌨️ Escribe en el campo de arriba y presiona Enter para usar el teclado</div>', unsafe_allow_html=True)
-
+        st.markdown("""
+        <div class="keyboard-hint">
+            <kbd>0-9</kbd> Números | <kbd>+</kbd> <kbd>-</kbd> <kbd>*</kbd> <kbd>/</kbd> Operadores |
+            <kbd>Enter</kbd> = | <kbd>Backspace</kbd> Borrar | <kbd>Esc</kbd> C |
+            <kbd>%</kbd> <kbd>^</kbd> <kbd>R</kbd> <kbd>I</kbd> <kbd>S</kbd> Funciones
+        </div>
+        """, unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
         st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
-
-
-
-    search_col1, search_col2 = st.columns([1.5, 8.5])
-    with search_col1:
         st.markdown("<p style='color:#888; font-size:0.75rem; margin:0; padding:4px 0 0 0; text-align:right;'>🔍 Búsqueda rápida</p>", unsafe_allow_html=True)
     with search_col2:
         busqueda = st.text_input("", placeholder="Buscar por nombre, teléfono, reserva, VIP, Relaxury...", label_visibility="collapsed", key="buscador_global")
