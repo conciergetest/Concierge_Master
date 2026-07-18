@@ -520,11 +520,11 @@ with left_col:
     st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
 
     # === CALCULADORA DESPLEGABLE ===
-      # === CALCULADORA DESPLEGABLE ===
-      # === CALCULADORA DESPLEGABLE ===
-      if st.session_state.get("mostrar_calculadora", False):
-          import streamlit.components.v1 as components
-          components.html("""
+    # === CALCULADORA DESPLEGABLE ===
+    # === CALCULADORA DESPLEGABLE ===
+    if st.session_state.get("mostrar_calculadora", False):
+        import streamlit.components.v1 as components
+        components.html("""
     <!DOCTYPE html>
     <html>
     <head>
@@ -767,8 +767,8 @@ with left_col:
     </script>
     </body>
     </html>
-          """, height=490)
-          st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+        """, height=490)
+        st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
 
 
 
