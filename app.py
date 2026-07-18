@@ -151,7 +151,7 @@ def cargar_reservaciones():
                                      "check_in", "check_out", "res_number", "phone",
                                      "info", "ird", "hsk", "rate", "trans"])
     # Ordenar por check_in y nombre
-    df["check_in_dt"] = pd.to_datetime(df["check_in"], format="%b %d", errors="coerce")
+    df["check_in_dt"] = df["check_in"].apply(parse_fecha)
     df = df.sort_values(by=["check_in_dt", "name"])
     return df.drop(columns=["check_in_dt"])
 
@@ -174,6 +174,21 @@ def insertar_batch_reservas(lista_data: list):
     """Inserta múltiples reservas en lote."""
     supabase.table(TABLE_NAME).insert(lista_data).execute()
     st.cache_data.clear()
+
+
+def parse_fecha(fecha_str):
+    """Parsea fecha en varios formatos para compatibilidad retroactiva.
+    Acepta: 'July 14, 2026', 'Jul 14, 2026', 'July 14', 'Jul 14'
+    """
+    if not fecha_str or str(fecha_str).strip() == "":
+        return None
+    s = str(fecha_str).strip()
+    for fmt in ["%B %d, %Y", "%b %d, %Y", "%B %d", "%b %d"]:
+        try:
+            return datetime.strptime(s, fmt)
+        except Exception:
+            pass
+    return None
 
 # ============================================================
 # HELPERS DE HORA (sin cambios)
@@ -452,7 +467,7 @@ with left_col:
         for j in range(2):
             if i + j < len(fechas_checkout):
                 fecha = fechas_checkout[i + j]
-                mes_abr, dia_num, fecha_db = fecha.strftime("%b").upper(), fecha.strftime("%d"), fecha.strftime("%b %d")
+                mes_abr, dia_num, fecha_db = fecha.strftime("%b").upper(), fecha.strftime("%d"), fecha.strftime("%B %d, %Y")
                 count = len(df_todas[df_todas["check_out"] == fecha_db])
                 with cols[j]:
                     if st.button(f"{dia_num}-{mes_abr}: [{count}]", key=f"checkout_btn_{fecha_db}", use_container_width=True):
@@ -905,7 +920,7 @@ if mostrar_importar:
                     df_preview = df_excel[columnas_esperadas].copy()
                     for col in ["check_in", "check_out"]:
                         if col in df_preview.columns:
-                            try: df_preview[col] = pd.to_datetime(df_preview[col], errors="coerce").dt.strftime("%b %d")
+                            try: df_preview[col] = pd.to_datetime(df_preview[col], errors="coerce").dt.strftime("%B %d, %Y")
                             except: pass
                     st.dataframe(df_preview, use_container_width=True, height=250)
                     col_proc, _ = st.columns([1, 3])
@@ -923,11 +938,11 @@ if mostrar_importar:
                                         email = str(row.get("email", "")).strip()
                                         check_in_raw, check_out_raw = row.get("check_in", ""), row.get("check_out", "")
                                         if pd.notna(check_in_raw):
-                                            try: check_in = pd.to_datetime(check_in_raw).strftime("%b %d")
+                                            try: check_in = pd.to_datetime(check_in_raw).strftime("%B %d, %Y")
                                             except: check_in = str(check_in_raw).strip()
                                         else: check_in = ""
                                         if pd.notna(check_out_raw):
-                                            try: check_out = pd.to_datetime(check_out_raw).strftime("%b %d")
+                                            try: check_out = pd.to_datetime(check_out_raw).strftime("%B %d, %Y")
                                             except: check_out = str(check_out_raw).strip()
                                         else: check_out = ""
                                         res_number = str(row.get("res_number", "")).strip()
@@ -985,7 +1000,7 @@ if mostrar_exportar:
         if filtro_checkout:
             df_export = df_export[df_export["check_out"] == filtro_checkout]; filtro_activo = True
         if fecha_filtro_activo and filtro_fecha_date:
-            fecha_filtro = datetime.strptime(filtro_fecha_date, "%Y-%m-%d").strftime("%b %d")
+            fecha_filtro = datetime.strptime(filtro_fecha_date, "%Y-%m-%d").strftime("%B %d, %Y")
             df_export = df_export[df_export["check_in"] == fecha_filtro]; filtro_activo = True
         if busqueda and busqueda.strip():
             busqueda_lower = busqueda.strip().lower()
@@ -1023,22 +1038,28 @@ if st.query_params.get("action") == "reporte":
             if st.button("↩️ REGRESAR", key="regresar_reporte"):
                 st.query_params.clear(); st.rerun()
         hoy = datetime.now()
-        hoy_str = hoy.strftime("%b %d")
+        hoy_str = hoy.strftime("%B %d, %Y")
         manana = hoy + timedelta(days=1)
-        manana_str = manana.strftime("%b %d")
+        manana_str = manana.strftime("%B %d, %Y")
         df_todas = cargar_reservaciones()
 
         def fecha_es_menor_igual(fecha_str, referencia_str):
             try:
-                fecha = datetime.strptime(fecha_str, "%b %d").replace(year=hoy.year)
-                referencia = datetime.strptime(referencia_str, "%b %d").replace(year=hoy.year)
+                fecha = parse_fecha(fecha_str)
+                referencia = parse_fecha(referencia_str)
+                if not fecha or not referencia: return False
+                if fecha.year == 1900: fecha = fecha.replace(year=hoy.year)
+                if referencia.year == 1900: referencia = referencia.replace(year=hoy.year)
                 return fecha <= referencia
             except: return False
 
         def fecha_es_mayor(fecha_str, referencia_str):
             try:
-                fecha = datetime.strptime(fecha_str, "%b %d").replace(year=hoy.year)
-                referencia = datetime.strptime(referencia_str, "%b %d").replace(year=hoy.year)
+                fecha = parse_fecha(fecha_str)
+                referencia = parse_fecha(referencia_str)
+                if not fecha or not referencia: return False
+                if fecha.year == 1900: fecha = fecha.replace(year=hoy.year)
+                if referencia.year == 1900: referencia = referencia.replace(year=hoy.year)
                 return fecha > referencia
             except: return False
 
@@ -1429,8 +1450,8 @@ if mostrar_formulario:
             if st.form_submit_button("Guardar Reservación"):
                 data = {
                     "eta": eta, "name": name, "qty": qty, "room": room,
-                    "email": email, "check_in": check_in.strftime("%b %d"),
-                    "check_out": check_out.strftime("%b %d"), "res_number": res_number,
+                    "email": email, "check_in": check_in.strftime("%B %d, %Y"),
+                    "check_out": check_out.strftime("%B %d, %Y"), "res_number": res_number,
                     "phone": phone, "info": info, "ird": ird, "hsk": hsk,
                     "rate": rate, "trans": trans
                 }
@@ -1447,10 +1468,12 @@ if mostrar_editar:
             st.subheader("✏️ Editar Reservación")
             if st.button("↩️ REGRESAR", key="regresar_editar"):
                 st.query_params.clear(); st.rerun()
-            try: check_in_dt = datetime.strptime(fila_guardada.get("check_in", ""), "%b %d").replace(year=datetime.now().year)
-            except: check_in_dt = datetime.now()
-            try: check_out_dt = datetime.strptime(fila_guardada.get("check_out", ""), "%b %d").replace(year=datetime.now().year)
-            except: check_out_dt = datetime.now()
+            _ci = parse_fecha(fila_guardada.get("check_in", ""))
+            check_in_dt = _ci if _ci else datetime.now()
+            if check_in_dt.year == 1900: check_in_dt = check_in_dt.replace(year=datetime.now().year)
+            _co = parse_fecha(fila_guardada.get("check_out", ""))
+            check_out_dt = _co if _co else datetime.now()
+            if check_out_dt.year == 1900: check_out_dt = check_out_dt.replace(year=datetime.now().year)
             with st.form("form_editar"):
                 c1, c2, c3, c4 = st.columns(4)
                 eta = c1.text_input("ETA", value=str(fila_guardada.get("eta", "")))
@@ -1481,8 +1504,8 @@ if mostrar_editar:
                 if st.form_submit_button("💾 Guardar Cambios"):
                     data = {
                         "eta": eta, "name": name, "qty": qty, "room": room,
-                        "email": email, "check_in": check_in.strftime("%b %d"),
-                        "check_out": check_out.strftime("%b %d"), "res_number": res_number,
+                        "email": email, "check_in": check_in.strftime("%B %d, %Y"),
+                        "check_out": check_out.strftime("%B %d, %Y"), "res_number": res_number,
                         "phone": phone, "info": info, "ird": ird, "hsk": hsk,
                         "rate": rate, "trans": trans
                     }
@@ -1505,7 +1528,7 @@ if filtro_checkout:
     df_reservas = df_reservas[df_reservas["check_out"] == filtro_checkout]
     st.info(f"📅 Mostrando reservas que salen el: {filtro_checkout}")
 if fecha_filtro_activo and filtro_fecha_date:
-    fecha_filtro = datetime.strptime(filtro_fecha_date, "%Y-%m-%d").strftime("%b %d")
+    fecha_filtro = datetime.strptime(filtro_fecha_date, "%Y-%m-%d").strftime("%B %d, %Y")
     df_reservas = df_reservas[df_reservas["check_in"] == fecha_filtro]
     st.info(f"📅 Mostrando reservas con check-in el: {fecha_filtro}")
 if busqueda and busqueda.strip():
@@ -1526,8 +1549,8 @@ column_config = {
     "qty": st.column_config.NumberColumn("QTY", width=45),
     "room": st.column_config.TextColumn("ROOM", width=55),
     "email": st.column_config.TextColumn("EMAIL", width=130),
-    "check_in": st.column_config.TextColumn("CHECK IN", width=70),
-    "check_out": st.column_config.TextColumn("CHECK OUT", width=75),
+    "check_in": st.column_config.TextColumn("CHECK IN", width=110),
+    "check_out": st.column_config.TextColumn("CHECK OUT", width=110),
     "res_number": st.column_config.TextColumn("RESERVATION", width=90),
     "phone": st.column_config.TextColumn("PHONE", width=110),
     "info": st.column_config.TextColumn("INFO", width=180),
@@ -1537,9 +1560,17 @@ column_config = {
     "trans": st.column_config.TextColumn("TRANS", width=80),
 }
 
-# Mostrar tabla con selección de fila
+# Mostrar tabla con selección de fila (filas VIP resaltadas en dorado)
+def _color_vip(row):
+    """Resalta en dorado las filas donde info contenga VIP."""
+    if "VIP" in str(row.get("info", "")).upper():
+        return ["background-color: #2d1f00; color: #FFD700; font-weight: bold"] * len(row)
+    return [""] * len(row)
+
+df_styled = df_reservas.style.apply(_color_vip, axis=1)
+
 seleccion = st.dataframe(
-    df_reservas,
+    df_styled,
     column_config=column_config,
     use_container_width=True,
     height=620,
@@ -1623,12 +1654,15 @@ if st.session_state.get("mostrar_botones", False):
 def calcular_noches(check_in_str, check_out_str):
     """Calcula noches entre check_in y check_out."""
     try:
-        from datetime import datetime
         año = datetime.now().year
-        fecha_in = datetime.strptime(f"{check_in_str} {año}", "%b %d %Y")
-        fecha_out = datetime.strptime(f"{check_out_str} {año}", "%b %d %Y")
+        fecha_in = parse_fecha(check_in_str)
+        fecha_out = parse_fecha(check_out_str)
+        if fecha_in is None or fecha_out is None:
+            return 0
+        if fecha_in.year == 1900: fecha_in = fecha_in.replace(year=año)
+        if fecha_out.year == 1900: fecha_out = fecha_out.replace(year=año)
         if fecha_out < fecha_in:
-            fecha_out = datetime.strptime(f"{check_out_str} {año + 1}", "%b %d %Y")
+            fecha_out = fecha_out.replace(year=fecha_out.year + 1)
         return max(0, (fecha_out - fecha_in).days)
     except Exception:
         return 0
