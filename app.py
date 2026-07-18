@@ -781,12 +781,24 @@ with left_col:
 with right_col:
     categorias = {"VIP": "#00E5FF", "ANNIVERSARY": "#4CAF50", "BIRTHDAY": "#FF5252",
                   "HONEYMOON": "#FF9800", "BABYMOON": "#9C27B0", "TEAM MEMBER": "#FFC107", "LEISURE": "#2196F3"}
+    # Aplicar los mismos filtros de la tabla al gráfico
+    df_chart = df_todas.copy()
+    if filtro_checkout:
+        df_chart = df_chart[df_chart["check_out"] == filtro_checkout]
+    if fecha_filtro_activo and filtro_fecha_date:
+        _fecha_filtro_chart = datetime.strptime(filtro_fecha_date, "%Y-%m-%d").strftime("%B %d, %Y")
+        df_chart = df_chart[df_chart["check_in"] == _fecha_filtro_chart]
+    if busqueda and busqueda.strip():
+        _busq_lower = busqueda.strip().lower()
+        _mask_busq = df_chart.astype(str).apply(lambda row: row.str.lower().str.contains(_busq_lower, na=False).any(), axis=1)
+        df_chart = df_chart[_mask_busq]
+    total_chart = len(df_chart)
     conteo_categorias = {}
     for cat in categorias:
         if cat == "LEISURE": continue
-        conteo_categorias[cat] = df_todas["info"].astype(str).str.upper().str.contains(cat, na=False).sum()
+        conteo_categorias[cat] = df_chart["info"].astype(str).str.upper().str.contains(cat, na=False).sum()
     total_categorizadas = sum(conteo_categorias.values())
-    conteo_categorias["LEISURE"] = max(0, total_reservas - total_categorizadas)
+    conteo_categorias["LEISURE"] = max(0, total_chart - total_categorizadas)
     conteo_ordenado = dict(sorted(conteo_categorias.items(), key=lambda x: x[1], reverse=True))
     max_valor = max(conteo_ordenado.values()) if conteo_ordenado else 1
     html_chart = """<!DOCTYPE html><html><head><style>
@@ -802,7 +814,7 @@ with right_col:
     .bar-fill{height:100%;border-radius:3px;transition:width 0.5s ease}
     .bar-value{width:28px;color:#fff;font-size:11px;font-weight:bold;text-align:right;padding-left:8px}
     </style></head><body><div class="chart-container"><div class="chart-header">
-    <div class="chart-title">Guest Categories</div><div class="total-circle"><div class="total-number">""" + str(total_reservas) + """</div></div></div>"""
+    <div class="chart-title">Guest Categories</div><div class="total-circle"><div class="total-number">""" + str(total_chart) + """</div></div></div>"""
     for cat, valor in conteo_ordenado.items():
         color = categorias.get(cat, "#888")
         porcentaje = (valor / max_valor * 100) if max_valor > 0 else 0
@@ -810,7 +822,7 @@ with right_col:
         <div class="bar-fill" style="width:{porcentaje}%;background-color:{color};"></div></div><div class="bar-value">{valor}</div></div>"""
     html_chart += """</div></body></html>"""
     st.html(html_chart)
-    mask_relaxury = df_todas.astype(str).apply(lambda row: row.str.upper().str.contains("RELAXURY", na=False).any(), axis=1)
+    mask_relaxury = df_chart.astype(str).apply(lambda row: row.str.upper().str.contains("RELAXURY", na=False).any(), axis=1)
     total_relaxury = mask_relaxury.sum()
     st.markdown(f"""<div style="background-color: #1a1a2e; border-radius: 8px; padding: 6px 10px; margin-top: 2px; text-align: center; border: 1px solid #E91E63;">
         <span style="color: #E91E63; font-size: 0.75rem; font-weight: bold;">🏖️ RELAXURY:</span>
