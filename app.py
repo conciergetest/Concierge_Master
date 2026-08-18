@@ -594,11 +594,23 @@ with right_col:
         <span style="color: #E91E63; font-size: 0.75rem; font-weight: bold;">🏖️ RELAXURY:</span>
         <span style="color: #ffffff; font-size: 1.0rem; font-weight: bold;"> {total_relaxury}</span></div>""", unsafe_allow_html=True)
 
-    # BOTONES DE ACCION
+    # BOTONES GENERALES DE ACCION
     st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
-    # Se rellena después de leer la selección de la tabla para que EDITAR,
-    # CARTA y BORRAR respondan en el mismo ciclo de interacción.
-    action_bar_placeholder = st.empty()
+    action_cols = st.columns(6)
+    botones_generales = [
+        ("NUEVA", "btn_nueva_v2", "nueva"),
+        ("IMPORTAR", "btn_importar_v2", "importar"),
+        ("EXPORTAR", "btn_exportar_v2", "exportar"),
+        ("REPORTE", "btn_reporte_v2", "reporte"),
+        ("AGENDA", "btn_agenda_v2", "agenda"),
+    ]
+    for action_col, (label, key, action) in zip(action_cols, botones_generales):
+        if action_col.button(label, key=key, use_container_width=True):
+            st.query_params["action"] = action
+            st.rerun()
+    if action_cols[-1].button("🧮", key="btn_calc_v2", use_container_width=True):
+        st.session_state["mostrar_calculadora"] = not st.session_state.get("mostrar_calculadora", False)
+        st.rerun()
 
     # Filtros rápidos del dashboard de referencia.
     filtro_cols = st.columns(6)
@@ -1565,11 +1577,11 @@ if filtro_marca:
 
 # TABLA CON SELECCIÓN NATIVA DE STREAMLIT
 st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
+table_action_placeholder = st.empty()
 
 # Configurar columnas para mejor visualización - ANCHOS COMPACTOS
 # Todos los anchos en pixeles para que quepan sin scroll horizontal
 column_config = {
-    "id": st.column_config.NumberColumn("ID", width=50),
     "eta": st.column_config.TextColumn("ETA", width=70),
     "name": st.column_config.TextColumn("NAME", width=140),
     "qty": st.column_config.NumberColumn("QTY", width=45),
@@ -1586,14 +1598,22 @@ column_config = {
     "trans": st.column_config.TextColumn("TRANS", width=80),
 }
 
-# Mostrar tabla con selección de fila (filas VIP resaltadas en dorado)
-def _color_vip(row):
-    """Resalta en dorado las filas donde info contenga VIP."""
+# Mostrar tabla con selección de fila (filas VIP doradas y fila elegida cian)
+df_reservas_display = df_reservas.drop(columns=["id"], errors="ignore").reset_index(drop=True)
+selected_display_idx = st.session_state.get("fila_seleccionada_idx")
+
+def _color_row(row):
+    """Resalta la reserva elegida en cian y las VIP en dorado."""
+    if selected_display_idx is not None and row.name == selected_display_idx:
+        return [
+            "background-color: #00E5FF; color: #001219; font-weight: 800; "
+            "border-top: 2px solid #ffffff; border-bottom: 2px solid #ffffff;"
+        ] * len(row)
     if "VIP" in str(row.get("info", "")).upper():
         return ["background-color: #2d1f00; color: #FFD700; font-weight: bold"] * len(row)
     return [""] * len(row)
 
-df_styled = df_reservas.style.apply(_color_vip, axis=1)
+df_styled = df_reservas_display.style.apply(_color_row, axis=1)
 
 seleccion = st.dataframe(
     df_styled,
@@ -1611,32 +1631,40 @@ if filas_seleccionadas:
     idx = filas_seleccionadas[0]
     st.session_state["fila_seleccionada"] = df_reservas.iloc[idx].to_dict()
     st.session_state["fila_seleccionada_idx"] = idx
+    if st.session_state.pop("_selection_refresh_pending", False) is False and idx != selected_display_idx:
+        st.session_state["_selection_refresh_pending"] = True
+        st.rerun()
+    else:
+        st.session_state.pop("_selection_refresh_pending", None)
+elif st.session_state.pop("_selection_refresh_pending", False):
+    # Algunos reruns de Streamlit no devuelven la selección del grid, pero
+    # conservamos la fila recién elegida para poder pintarla y usar sus acciones.
+    pass
 elif st.session_state.get("fila_seleccionada") and query_params.get("action") not in {"editar", "carta", "cancelar"}:
     limpiar_seleccion()
 
-# La barra se dibuja en el placeholder superior después de conocer la fila.
 hay_reserva_seleccionada = bool(st.session_state.get("fila_seleccionada"))
-botones_accion = [
-    ("NUEVA", "btn_nueva_v2", "nueva"),
-    ("IMPORTAR", "btn_importar_v2", "importar"),
-    ("EXPORTAR", "btn_exportar_v2", "exportar"),
-    ("REPORTE", "btn_reporte_v2", "reporte"),
-    ("AGENDA", "btn_agenda_v2", "agenda"),
-]
 if hay_reserva_seleccionada:
-    botones_accion[1:1] = [("EDITAR", "btn_editar_v2", "editar")]
-    botones_accion.insert(4, ("CARTA", "btn_carta_v2", "carta"))
-    botones_accion.insert(5, ("BORRAR", "btn_cancelar_v2", "cancelar"))
-
-with action_bar_placeholder.container():
-    action_cols = st.columns(len(botones_accion) + 1)
-    for action_col, (label, key, action) in zip(action_cols, botones_accion):
-        if action_col.button(label, key=key, use_container_width=True):
-            st.query_params["action"] = action
+    with table_action_placeholder.container():
+        selected_cols = st.columns([7, 1, 1, 1])
+        fila_actual = st.session_state["fila_seleccionada"]
+        selected_cols[0].markdown(
+            f"""<div style="background:#061c2b; border:2px solid #00E5FF; box-shadow:0 0 12px #00E5FF;
+            border-radius:6px; padding:7px 10px; color:#fff; font-size:0.78rem;">
+            <span style="color:#00E5FF; font-weight:800;">● RESERVA SELECCIONADA</span>
+            &nbsp; {fila_actual.get('name', 'N/A')} &nbsp;|&nbsp; Room: {fila_actual.get('room', 'N/A')}
+            </div>""",
+            unsafe_allow_html=True,
+        )
+        if selected_cols[1].button("EDITAR", key="btn_editar_v2", use_container_width=True):
+            st.query_params["action"] = "editar"
             st.rerun()
-    if action_cols[-1].button("🧮", key="btn_calc_v2", use_container_width=True):
-        st.session_state["mostrar_calculadora"] = not st.session_state.get("mostrar_calculadora", False)
-        st.rerun()
+        if selected_cols[2].button("CARTA", key="btn_carta_v2", use_container_width=True):
+            st.query_params["action"] = "carta"
+            st.rerun()
+        if selected_cols[3].button("BORRAR", key="btn_cancelar_v2", use_container_width=True):
+            st.query_params["action"] = "cancelar"
+            st.rerun()
 
 # Mostrar fila seleccionada actualmente
 fila_guardada = st.session_state.get("fila_seleccionada")
@@ -1644,7 +1672,7 @@ if fila_guardada:
     st.markdown(f"""<div style="background-color: #1a1a2e; border-radius: 8px; padding: 8px 12px; margin: 5px 0; border: 1px solid #00E5FF; display: flex; align-items: center; gap: 10px;">
         <span style="color: #00E5FF; font-size: 0.8rem;">✅ SELECCIONADO:</span>
         <span style="color: #fff; font-size: 0.85rem; font-weight: bold;">{fila_guardada.get('name', 'N/A')}</span>
-        <span style="color: #888; font-size: 0.75rem;">| Room: {fila_guardada.get('room', 'N/A')} | ID: {fila_guardada.get('id', 'N/A')}</span>
+        <span style="color: #888; font-size: 0.75rem;">| Room: {fila_guardada.get('room', 'N/A')}</span>
     </div>""", unsafe_allow_html=True)
 else:
     st.markdown("""<div style="background-color: #1a0d0d; border-radius: 8px; padding: 8px 12px; margin: 5px 0; border: 1px solid #7d2e2e;">
