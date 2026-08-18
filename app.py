@@ -596,20 +596,9 @@ with right_col:
 
     # BOTONES DE ACCION
     st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
-    btn_col1, btn_col2, btn_col3, btn_col4, btn_col5, btn_col6, btn_col7, btn_col8, btn_col9 = st.columns([1, 1, 1, 1, 1, 1, 1, 1, 1])
-    if btn_col1.button("NUEVA", key="btn_nueva_v2", use_container_width=True): st.query_params["action"] = "nueva"; st.rerun()
-    if btn_col2.button("EDITAR", key="btn_editar_v2", use_container_width=True): st.query_params["action"] = "editar"; st.rerun()
-    if btn_col3.button("IMPORTAR", key="btn_importar_v2", use_container_width=True): st.query_params["action"] = "importar"; st.rerun()
-    if btn_col4.button("EXPORTAR", key="btn_exportar_v2", use_container_width=True): st.query_params["action"] = "exportar"; st.rerun()
-    if btn_col5.button("CARTA", key="btn_carta_v2", use_container_width=True): st.query_params["action"] = "carta"; st.rerun()
-    if btn_col6.button("BORRAR", key="btn_cancelar_v2", use_container_width=True): st.query_params["action"] = "cancelar"; st.rerun()
-    if btn_col7.button("REPORTE", key="btn_reporte_v2", use_container_width=True): st.query_params["action"] = "reporte"; st.rerun()
-    if btn_col8.button("AGENDA", key="btn_agenda_v2", use_container_width=True):
-        st.query_params["action"] = "agenda"
-        st.rerun()
-    if btn_col9.button("🧮", key="btn_calc_v2", use_container_width=True): 
-        st.session_state["mostrar_calculadora"] = not st.session_state.get("mostrar_calculadora", False)
-        st.rerun()
+    # Se rellena después de leer la selección de la tabla para que EDITAR,
+    # CARTA y BORRAR respondan en el mismo ciclo de interacción.
+    action_bar_placeholder = st.empty()
 
     # Filtros rápidos del dashboard de referencia.
     filtro_cols = st.columns(6)
@@ -1616,13 +1605,38 @@ seleccion = st.dataframe(
     key="tabla_principal_concierge"
 )
 
-# Guardar fila seleccionada en session_state
-# Solo actualizar si hay una nueva selección; no borrar la anterior si no hay selección
-# (la selección se pierde al hacer clic en botones que cambian query_params)
-if seleccion and seleccion.selection.rows:
-    idx = seleccion.selection.rows[0]
+# Guardar o limpiar la fila seleccionada en session_state.
+filas_seleccionadas = list(seleccion.selection.rows) if seleccion else []
+if filas_seleccionadas:
+    idx = filas_seleccionadas[0]
     st.session_state["fila_seleccionada"] = df_reservas.iloc[idx].to_dict()
     st.session_state["fila_seleccionada_idx"] = idx
+elif st.session_state.get("fila_seleccionada") and query_params.get("action") not in {"editar", "carta", "cancelar"}:
+    limpiar_seleccion()
+
+# La barra se dibuja en el placeholder superior después de conocer la fila.
+hay_reserva_seleccionada = bool(st.session_state.get("fila_seleccionada"))
+botones_accion = [
+    ("NUEVA", "btn_nueva_v2", "nueva"),
+    ("IMPORTAR", "btn_importar_v2", "importar"),
+    ("EXPORTAR", "btn_exportar_v2", "exportar"),
+    ("REPORTE", "btn_reporte_v2", "reporte"),
+    ("AGENDA", "btn_agenda_v2", "agenda"),
+]
+if hay_reserva_seleccionada:
+    botones_accion[1:1] = [("EDITAR", "btn_editar_v2", "editar")]
+    botones_accion.insert(4, ("CARTA", "btn_carta_v2", "carta"))
+    botones_accion.insert(5, ("BORRAR", "btn_cancelar_v2", "cancelar"))
+
+with action_bar_placeholder.container():
+    action_cols = st.columns(len(botones_accion) + 1)
+    for action_col, (label, key, action) in zip(action_cols, botones_accion):
+        if action_col.button(label, key=key, use_container_width=True):
+            st.query_params["action"] = action
+            st.rerun()
+    if action_cols[-1].button("🧮", key="btn_calc_v2", use_container_width=True):
+        st.session_state["mostrar_calculadora"] = not st.session_state.get("mostrar_calculadora", False)
+        st.rerun()
 
 # Mostrar fila seleccionada actualmente
 fila_guardada = st.session_state.get("fila_seleccionada")
