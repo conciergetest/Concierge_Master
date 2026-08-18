@@ -134,9 +134,31 @@ mostrar_formulario = query_params.get("action") == "nueva"
 mostrar_editar = query_params.get("action") == "editar"
 mostrar_importar = query_params.get("action") == "importar"
 mostrar_exportar = query_params.get("action") == "exportar"
+mostrar_agenda = query_params.get("action") == "agenda"
 filtro_checkout = query_params.get("checkout_filtro")
 filtro_fecha_date = query_params.get("fecha_date")
 fecha_filtro_activo = query_params.get("fecha_activa") == "true"
+filtro_marca = query_params.get("marca")
+
+# Filtros rápidos que aparecen en el dashboard de referencia.
+# Se buscan en todas las columnas para conservar la flexibilidad del logbook.
+FILTROS_RAPIDOS = [
+    "Alice", "Arrivals", "La Cenia", "NO Limit", "Open Table",
+    "Outlook-FW", "Outlook-PC", "Relaxury", "VTC", "BONUS", "QIAF",
+]
+
+def limpiar_seleccion():
+    st.session_state.pop("fila_guardada", None)
+    st.session_state.pop("fila_seleccionada", None)
+    st.session_state.pop("fila_seleccionada_idx", None)
+
+def aplicar_filtro_rapido(nombre):
+    limpiar_seleccion()
+    if nombre:
+        st.query_params["marca"] = nombre
+    else:
+        st.query_params.pop("marca", None)
+    st.rerun()
 
 # ============================================================
 # FUNCIONES CRUD CON SUPABASE
@@ -398,9 +420,19 @@ div[data-testid="stDataFrame"] div[style*="background"] {
 </style>
 """, unsafe_allow_html=True)
 
-header_col1, header_col2 = st.columns([1.3, 8.7])
+header_col1, header_col2 = st.columns([3.0, 7.0])
 with header_col1:
-    st.markdown('''<h2 style="color:#00E5FF; margin:0; padding:0; font-size:1.1rem; line-height:1.0;">Concierge<br>Master v5.1</h2>''', unsafe_allow_html=True)
+    st.markdown('''
+    <div style="display:flex; align-items:center; gap:10px; min-height:42px;">
+        <div style="font-family:Georgia,serif; font-size:2rem; line-height:1; color:#d4af37;
+                    border-right:1px solid #d4af37; padding-right:10px;">W A</div>
+        <div style="line-height:1.05;">
+            <div style="color:#d4af37; font-size:0.72rem; letter-spacing:1px; font-weight:700;">WALDORF ASTORIA</div>
+            <div style="color:#888; font-size:0.52rem; letter-spacing:0.8px;">COSTA RICA · PUNTA CACIQUE</div>
+            <div style="color:#00E5FF; font-size:0.92rem; font-weight:700; margin-top:3px;">Concierge Master v5.1</div>
+        </div>
+    </div>
+    ''', unsafe_allow_html=True)
 with header_col2:
     import streamlit.components.v1 as components
 
@@ -456,7 +488,7 @@ st.markdown(f"""<div style="background-color: #1a1a2e; border-radius: 8px; paddi
     <span style="color: #00E5FF; font-size: 0.75rem; font-weight: bold;">📊 TOTAL RESERVAS:</span>
     <span style="color: #ffffff; font-size: 1.0rem; font-weight: bold;"> {total_reservas}</span></div>""", unsafe_allow_html=True)
 
-left_col, right_col = st.columns([5.0, 5.0])
+left_col, right_col = st.columns([1.25, 8.75])
 with left_col:
     st.markdown("""<div style="background-color: #1a1a2e; border-radius: 8px; padding: 5px 8px 2px 8px; margin-bottom: 1px;">
         <div style="color: #ffffff; font-size: 0.8rem; font-weight: bold; text-align: center; margin-bottom: 3px;">🏨 Checking Out Rooms</div></div>""", unsafe_allow_html=True)
@@ -501,6 +533,67 @@ with left_col:
             st.query_params.pop("checkout_filtro", None)
             st.rerun()
 
+with right_col:
+    search_col1, search_col2 = st.columns([1.5, 8.5])
+    with search_col1:
+        st.markdown("<p style='color:#888; font-size:0.75rem; margin:0; padding:4px 0 0 0; text-align:right;'>🔍 Búsqueda rápida</p>", unsafe_allow_html=True)
+    with search_col2:
+        busqueda = st.text_input("", placeholder="Buscar por nombre, teléfono, reserva, VIP, Relaxury...", label_visibility="collapsed", key="buscador_global")
+
+
+    categorias = {"VIP": "#00E5FF", "ANNIVERSARY": "#4CAF50", "BIRTHDAY": "#FF5252",
+                  "HONEYMOON": "#FF9800", "BABYMOON": "#9C27B0", "TEAM MEMBER": "#FFC107", "LEISURE": "#2196F3"}
+    # Aplicar los mismos filtros de la tabla al gráfico
+    df_chart = df_todas.copy()
+    if filtro_checkout:
+        df_chart = df_chart[df_chart["check_out"] == filtro_checkout]
+    if fecha_filtro_activo and filtro_fecha_date:
+        _fecha_filtro_chart = datetime.strptime(filtro_fecha_date, "%Y-%m-%d").strftime("%B %d, %Y")
+        df_chart = df_chart[df_chart["check_in"] == _fecha_filtro_chart]
+    if busqueda and busqueda.strip():
+        _busq_lower = busqueda.strip().lower()
+        _mask_busq = df_chart.astype(str).apply(lambda row: row.str.lower().str.contains(_busq_lower, na=False).any(), axis=1)
+        df_chart = df_chart[_mask_busq]
+    if filtro_marca:
+        _marca_lower = filtro_marca.strip().lower()
+        _mask_marca = df_chart.astype(str).apply(lambda row: row.str.lower().str.contains(_marca_lower, na=False).any(), axis=1)
+        df_chart = df_chart[_mask_marca]
+    total_chart = len(df_chart)
+    conteo_categorias = {}
+    for cat in categorias:
+        if cat == "LEISURE": continue
+        conteo_categorias[cat] = df_chart["info"].astype(str).str.upper().str.contains(cat, na=False).sum()
+    total_categorizadas = sum(conteo_categorias.values())
+    conteo_categorias["LEISURE"] = max(0, total_chart - total_categorizadas)
+    conteo_ordenado = dict(sorted(conteo_categorias.items(), key=lambda x: x[1], reverse=True))
+    max_valor = max(conteo_ordenado.values()) if conteo_ordenado else 1
+    html_chart = """<!DOCTYPE html><html><head><style>
+    *{margin:0;padding:0;box-sizing:border-box}body{background-color:#0d0d0d;font-family:'Segoe UI',sans-serif}
+    .chart-container{background-color:#0d0d0d;border-radius:12px;padding:12px 15px;min-height:220px;color:white}
+    .chart-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .chart-title{color:#888;font-size:10px;font-weight:bold;letter-spacing:1px;text-transform:uppercase}
+    .total-circle{width:42px;height:42px;border:2px solid #00E5FF;border-radius:50%;display:flex;align-items:center;justify-content:center}
+    .total-number{color:#00E5FF;font-size:14px;font-weight:bold}
+    .bar-row{display:flex;align-items:center;margin-bottom:5px}
+    .bar-label{width:90px;color:#ccc;font-size:9px;text-align:right;padding-right:8px;white-space:nowrap}
+    .bar-track{flex:1;background-color:#1a1a1a;border-radius:3px;height:16px;position:relative;overflow:hidden}
+    .bar-fill{height:100%;border-radius:3px;transition:width 0.5s ease}
+    .bar-value{width:28px;color:#fff;font-size:11px;font-weight:bold;text-align:right;padding-left:8px}
+    </style></head><body><div class="chart-container"><div class="chart-header">
+    <div class="chart-title">Guest Categories</div><div class="total-circle"><div class="total-number">""" + str(total_chart) + """</div></div></div>"""
+    for cat, valor in conteo_ordenado.items():
+        color = categorias.get(cat, "#888")
+        porcentaje = (valor / max_valor * 100) if max_valor > 0 else 0
+        html_chart += f"""<div class="bar-row"><div class="bar-label">{cat}</div><div class="bar-track">
+        <div class="bar-fill" style="width:{porcentaje}%;background-color:{color};"></div></div><div class="bar-value">{valor}</div></div>"""
+    html_chart += """</div></body></html>"""
+    st.html(html_chart)
+    mask_relaxury = df_chart.astype(str).apply(lambda row: row.str.upper().str.contains("RELAXURY", na=False).any(), axis=1)
+    total_relaxury = mask_relaxury.sum()
+    st.markdown(f"""<div style="background-color: #1a1a2e; border-radius: 8px; padding: 6px 10px; margin-top: 2px; text-align: center; border: 1px solid #E91E63;">
+        <span style="color: #E91E63; font-size: 0.75rem; font-weight: bold;">🏖️ RELAXURY:</span>
+        <span style="color: #ffffff; font-size: 1.0rem; font-weight: bold;"> {total_relaxury}</span></div>""", unsafe_allow_html=True)
+
     # BOTONES DE ACCION
     st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
     btn_col1, btn_col2, btn_col3, btn_col4, btn_col5, btn_col6, btn_col7, btn_col8, btn_col9 = st.columns([1, 1, 1, 1, 1, 1, 1, 1, 1])
@@ -511,10 +604,30 @@ with left_col:
     if btn_col5.button("CARTA", key="btn_carta_v2", use_container_width=True): st.query_params["action"] = "carta"; st.rerun()
     if btn_col6.button("BORRAR", key="btn_cancelar_v2", use_container_width=True): st.query_params["action"] = "cancelar"; st.rerun()
     if btn_col7.button("REPORTE", key="btn_reporte_v2", use_container_width=True): st.query_params["action"] = "reporte"; st.rerun()
-    if btn_col8.button("AGENDA", key="btn_agenda_v2", use_container_width=True): st.switch_page("pages/agenda.py")
+    if btn_col8.button("AGENDA", key="btn_agenda_v2", use_container_width=True):
+        st.query_params["action"] = "agenda"
+        st.rerun()
     if btn_col9.button("🧮", key="btn_calc_v2", use_container_width=True): 
         st.session_state["mostrar_calculadora"] = not st.session_state.get("mostrar_calculadora", False)
         st.rerun()
+
+    # Filtros rápidos del dashboard de referencia.
+    filtro_cols = st.columns(6)
+    for idx, nombre_filtro in enumerate(FILTROS_RAPIDOS):
+        col = filtro_cols[idx % 6]
+        if col.button(
+            nombre_filtro,
+            key=f"quick_filter_{idx}",
+            use_container_width=True,
+            type="primary" if filtro_marca == nombre_filtro else "secondary",
+        ):
+            aplicar_filtro_rapido(None if filtro_marca == nombre_filtro else nombre_filtro)
+
+    if filtro_marca:
+        active_col, reset_col = st.columns([4, 1])
+        active_col.caption(f"🔎 Filtro rápido activo: **{filtro_marca}**")
+        if reset_col.button("RESET", key="btn_reset_quick_filter", use_container_width=True):
+            aplicar_filtro_rapido(None)
 
     # BARRA DE BUSQUEDA DEBAJO DE LOS BOTONES
     st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
@@ -772,61 +885,42 @@ with left_col:
 
 
 
-    search_col1, search_col2 = st.columns([1.5, 8.5])
-    with search_col1:
-        st.markdown("<p style='color:#888; font-size:0.75rem; margin:0; padding:4px 0 0 0; text-align:right;'>🔍 Búsqueda rápida</p>", unsafe_allow_html=True)
-    with search_col2:
-        busqueda = st.text_input("", placeholder="Buscar por nombre, teléfono, reserva, VIP, Relaxury...", label_visibility="collapsed", key="buscador_global")
 
-with right_col:
-    categorias = {"VIP": "#00E5FF", "ANNIVERSARY": "#4CAF50", "BIRTHDAY": "#FF5252",
-                  "HONEYMOON": "#FF9800", "BABYMOON": "#9C27B0", "TEAM MEMBER": "#FFC107", "LEISURE": "#2196F3"}
-    # Aplicar los mismos filtros de la tabla al gráfico
-    df_chart = df_todas.copy()
-    if filtro_checkout:
-        df_chart = df_chart[df_chart["check_out"] == filtro_checkout]
-    if fecha_filtro_activo and filtro_fecha_date:
-        _fecha_filtro_chart = datetime.strptime(filtro_fecha_date, "%Y-%m-%d").strftime("%B %d, %Y")
-        df_chart = df_chart[df_chart["check_in"] == _fecha_filtro_chart]
-    if busqueda and busqueda.strip():
-        _busq_lower = busqueda.strip().lower()
-        _mask_busq = df_chart.astype(str).apply(lambda row: row.str.lower().str.contains(_busq_lower, na=False).any(), axis=1)
-        df_chart = df_chart[_mask_busq]
-    total_chart = len(df_chart)
-    conteo_categorias = {}
-    for cat in categorias:
-        if cat == "LEISURE": continue
-        conteo_categorias[cat] = df_chart["info"].astype(str).str.upper().str.contains(cat, na=False).sum()
-    total_categorizadas = sum(conteo_categorias.values())
-    conteo_categorias["LEISURE"] = max(0, total_chart - total_categorizadas)
-    conteo_ordenado = dict(sorted(conteo_categorias.items(), key=lambda x: x[1], reverse=True))
-    max_valor = max(conteo_ordenado.values()) if conteo_ordenado else 1
-    html_chart = """<!DOCTYPE html><html><head><style>
-    *{margin:0;padding:0;box-sizing:border-box}body{background-color:#0d0d0d;font-family:'Segoe UI',sans-serif}
-    .chart-container{background-color:#0d0d0d;border-radius:12px;padding:12px 15px;min-height:220px;color:white}
-    .chart-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-    .chart-title{color:#888;font-size:10px;font-weight:bold;letter-spacing:1px;text-transform:uppercase}
-    .total-circle{width:42px;height:42px;border:2px solid #00E5FF;border-radius:50%;display:flex;align-items:center;justify-content:center}
-    .total-number{color:#00E5FF;font-size:14px;font-weight:bold}
-    .bar-row{display:flex;align-items:center;margin-bottom:5px}
-    .bar-label{width:90px;color:#ccc;font-size:9px;text-align:right;padding-right:8px;white-space:nowrap}
-    .bar-track{flex:1;background-color:#1a1a1a;border-radius:3px;height:16px;position:relative;overflow:hidden}
-    .bar-fill{height:100%;border-radius:3px;transition:width 0.5s ease}
-    .bar-value{width:28px;color:#fff;font-size:11px;font-weight:bold;text-align:right;padding-left:8px}
-    </style></head><body><div class="chart-container"><div class="chart-header">
-    <div class="chart-title">Guest Categories</div><div class="total-circle"><div class="total-number">""" + str(total_chart) + """</div></div></div>"""
-    for cat, valor in conteo_ordenado.items():
-        color = categorias.get(cat, "#888")
-        porcentaje = (valor / max_valor * 100) if max_valor > 0 else 0
-        html_chart += f"""<div class="bar-row"><div class="bar-label">{cat}</div><div class="bar-track">
-        <div class="bar-fill" style="width:{porcentaje}%;background-color:{color};"></div></div><div class="bar-value">{valor}</div></div>"""
-    html_chart += """</div></body></html>"""
-    st.html(html_chart)
-    mask_relaxury = df_chart.astype(str).apply(lambda row: row.str.upper().str.contains("RELAXURY", na=False).any(), axis=1)
-    total_relaxury = mask_relaxury.sum()
-    st.markdown(f"""<div style="background-color: #1a1a2e; border-radius: 8px; padding: 6px 10px; margin-top: 2px; text-align: center; border: 1px solid #E91E63;">
-        <span style="color: #E91E63; font-size: 0.75rem; font-weight: bold;">🏖️ RELAXURY:</span>
-        <span style="color: #ffffff; font-size: 1.0rem; font-weight: bold;"> {total_relaxury}</span></div>""", unsafe_allow_html=True)
+
+# ============================================================
+# AGENDA DE LLEGADAS Y SALIDAS
+# ============================================================
+if mostrar_agenda:
+    with st.container():
+        st.subheader("📅 Agenda de Reservaciones")
+        if st.button("↩️ REGRESAR A LA TABLA", key="regresar_agenda"):
+            st.query_params.clear()
+            st.rerun()
+
+        agenda_fecha = st.date_input("Fecha de agenda", value=datetime.now().date(), key="agenda_fecha")
+        agenda_df = cargar_reservaciones()
+        agenda_fecha_db = agenda_fecha.strftime("%B %d, %Y")
+        llegadas = agenda_df[agenda_df["check_in"] == agenda_fecha_db].copy()
+        salidas = agenda_df[agenda_df["check_out"] == agenda_fecha_db].copy()
+        a1, a2, a3 = st.columns(3)
+        a1.metric("Llegan", len(llegadas))
+        a2.metric("Salen", len(salidas))
+        a3.metric("En la base de datos", len(agenda_df))
+
+        ag_tab1, ag_tab2 = st.tabs(["📥 Llegadas", "📤 Salidas"])
+        with ag_tab1:
+            st.dataframe(
+                llegadas[[c for c in ["eta", "name", "qty", "room", "res_number", "phone", "info", "trans"] if c in llegadas.columns]],
+                use_container_width=True,
+                hide_index=True,
+            )
+        with ag_tab2:
+            st.dataframe(
+                salidas[[c for c in ["name", "room", "check_out", "res_number", "phone", "info"] if c in salidas.columns]],
+                use_container_width=True,
+                hide_index=True,
+            )
+    st.stop()
 
 # ============================================================
 # FORMULARIO IMPORTAR DESDE EXCEL
@@ -1474,6 +1568,11 @@ if busqueda and busqueda.strip():
     mask = df_reservas.astype(str).apply(lambda row: row.str.lower().str.contains(busqueda_lower, na=False).any(), axis=1)
     df_reservas = df_reservas[mask]
     if len(df_reservas) == 0: st.info(f"🔍 No se encontraron resultados para: '{busqueda}'")
+if filtro_marca:
+    marca_lower = filtro_marca.strip().lower()
+    mask_marca = df_reservas.astype(str).apply(lambda row: row.str.lower().str.contains(marca_lower, na=False).any(), axis=1)
+    df_reservas = df_reservas[mask_marca]
+    if len(df_reservas) == 0: st.info(f"🔎 No se encontraron reservas para el filtro: '{filtro_marca}'")
 
 # TABLA CON SELECCIÓN NATIVA DE STREAMLIT
 st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
@@ -1551,13 +1650,17 @@ if st.query_params.get("action") == "cancelar":
         st.warning(f"Se eliminará permanentemente la reserva ID: {id_a_borrar}")
         password = st.text_input("Ingrese clave de autorización:", type="password")
         if st.button("CONFIRMAR Y BORRAR"):
-            if password == "D6msnp8a":
+            delete_password = st.secrets.get("DELETE_PASSWORD", "")
+            if delete_password and password == delete_password:
                 eliminar_reserva(id_a_borrar)
                 st.session_state.pop("fila_seleccionada", None)
                 st.query_params.clear()
                 st.success("Registro eliminado correctamente.")
                 st.rerun()
-            else: st.error("Clave incorrecta.")
+            elif not delete_password:
+                st.error("La clave de borrado no está configurada en los Secrets de Streamlit.")
+            else:
+                st.error("Clave incorrecta.")
     else:
         st.error("Por favor, selecciona una fila en la tabla primero.")
         if st.button("↩️ REGRESAR", key="regresar_cancelar_error"):
@@ -1584,116 +1687,6 @@ if st.session_state.get("mostrar_botones", False):
                     use_container_width=True):
             st.session_state["sel_nombre"] = nombre
             st.rerun()
-
-# ============================================================
-# CÁLCULO DE NOCHES Y TOOLTIP
-# ============================================================
-
-def calcular_noches(check_in_str, check_out_str):
-    """Calcula noches entre check_in y check_out."""
-    try:
-        año = datetime.now().year
-        fecha_in = parse_fecha(check_in_str)
-        fecha_out = parse_fecha(check_out_str)
-        if fecha_in is None or fecha_out is None:
-            return 0
-        if fecha_in.year == 1900: fecha_in = fecha_in.replace(year=año)
-        if fecha_out.year == 1900: fecha_out = fecha_out.replace(year=año)
-        if fecha_out < fecha_in:
-            fecha_out = fecha_out.replace(year=fecha_out.year + 1)
-        return max(0, (fecha_out - fecha_in).days)
-    except Exception:
-        return 0
-
-# Agregar columna de noches al DataFrame
-if not df_reservas.empty and 'check_in' in df_reservas.columns and 'check_out' in df_reservas.columns:
-    df_reservas['noches'] = df_reservas.apply(
-        lambda r: calcular_noches(str(r.get('check_in', '')), str(r.get('check_out', ''))), 
-        axis=1
-    )
-
-# ============================================================
-# TABLA PRINCIPAL CON TOOLTIP DE NOCHES
-# ============================================================
-
-if not df_reservas.empty:
-    st.markdown("### 📊 Reservaciones")
-
-    # Configurar columnas con tooltip (help) mostrando info de noches
-    col_config = {
-        "name": st.column_config.TextColumn(
-            "Guest Name",
-            help="Nombre del huésped",
-            width="medium"
-        ),
-        "room": st.column_config.TextColumn(
-            "Room",
-            help="Número de habitación",
-            width="small"
-        ),
-        "check_in": st.column_config.TextColumn(
-            "Check In",
-            help="Fecha de llegada",
-            width="small"
-        ),
-        "check_out": st.column_config.TextColumn(
-            "Check Out",
-            help="Fecha de salida",
-            width="small"
-        ),
-        "noches": st.column_config.NumberColumn(
-            "🌙 Nights",
-            help="Número de noches de estadía (calculado automáticamente)",
-            width="small",
-            format="%d"
-        ),
-        "eta": st.column_config.TextColumn(
-            "ETA",
-            help="Hora estimada de llegada",
-            width="small"
-        ),
-        "res_number": st.column_config.TextColumn(
-            "Reservation",
-            help="Número de confirmación",
-            width="medium"
-        ),
-        "info": st.column_config.TextColumn(
-            "Notes",
-            help="Información especial (VIP, Birthday, Honeymoon, etc.)",
-            width="large"
-        ),
-        "rate": st.column_config.TextColumn(
-            "Rate",
-            help="Tarifa",
-            width="small"
-        ),
-        "trans": st.column_config.TextColumn(
-            "Transport",
-            help="Información de transporte",
-            width="medium"
-        ),
-    }
-
-    # Seleccionar columnas disponibles
-    cols_mostrar = [c for c in ["name", "room", "check_in", "check_out", "noches", 
-                                 "eta", "res_number", "info", "rate", "trans"] 
-                    if c in df_reservas.columns]
-
-    st.dataframe(
-        df_reservas[cols_mostrar],
-        column_config=col_config,
-        use_container_width=True,
-        hide_index=True
-    )
-
-    # Métricas resumen
-    total_noches = int(df_reservas['noches'].sum()) if 'noches' in df_reservas.columns else 0
-    promedio_noches = df_reservas['noches'].mean() if 'noches' in df_reservas.columns else 0
-
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Total Reservas", len(df_reservas))
-    c2.metric("Total Noches", total_noches)
-    c3.metric("Promedio Noches", f"{promedio_noches:.1f}")
 
 # ============================================================
 # FIN DE LA APLICACIÓN
