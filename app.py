@@ -225,8 +225,14 @@ def date_from_filter(value: str | None) -> datetime | None:
 
 
 def url_with(**params: str) -> str:
-    clean = {key: value for key, value in params.items() if value not in (None, "")}
-    return "?" + urlencode(clean) if clean else "?"
+    """Fusiona los parámetros nuevos con los query_params actuales."""
+    current = dict(st.query_params)
+    for key, value in params.items():
+        if value in (None, ""):
+            current.pop(key, None)
+        else:
+            current[key] = value
+    return "?" + urlencode(current) if current else "?"
 
 
 def clear_selection() -> None:
@@ -245,7 +251,13 @@ def set_action(action: str) -> None:
 
 def clear_page() -> None:
     clear_selection()
+    # Preservar filtros; solo quitamos action y sel_id
+    current = dict(st.query_params)
+    current.pop("action", None)
+    current.pop("sel_id", None)
     st.query_params.clear()
+    for key, value in current.items():
+        st.query_params[key] = value
     st.rerun()
 
 
@@ -567,8 +579,12 @@ def render_category_chart(df: pd.DataFrame) -> None:
 # -----------------------------------------------------------------------------
 
 def render_back_link() -> None:
+    current = dict(st.query_params)
+    current.pop("action", None)
+    current.pop("sel_id", None)
+    back_url = "?" + urlencode(current) if current else "?"
     st.markdown(
-        '<a class="action-link" href="?" style="background:#334155;max-width:185px">â† REGRESAR A LA TABLA</a>',
+        f'<a class="action-link" href="{back_url}" style="background:#334155;max-width:185px">â† REGRESAR A LA TABLA</a>',
         unsafe_allow_html=True,
     )
 
@@ -612,8 +628,7 @@ def render_new_reservation() -> None:
             "rate": rate.strip(), "trans": trans.strip(),
         })
         st.success("ReservaciÃ³n guardada correctamente.")
-        st.query_params.clear()
-        st.rerun()
+        clear_page()
 
 
 def render_edit_reservation() -> None:
