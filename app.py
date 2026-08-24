@@ -226,7 +226,7 @@ def date_from_filter(value: str | None) -> datetime | None:
 
 def url_with(**params: str) -> str:
     """Fusiona los parámetros nuevos con los query_params actuales."""
-    current = dict(st.query_params)
+    current = {k: v for k, v in st.query_params.items()}
     for key, value in params.items():
         if value in (None, ""):
             current.pop(key, None)
@@ -251,13 +251,10 @@ def set_action(action: str) -> None:
 
 def clear_page() -> None:
     clear_selection()
-    # Preservar filtros; solo quitamos action y sel_id
-    current = dict(st.query_params)
-    current.pop("action", None)
-    current.pop("sel_id", None)
-    st.query_params.clear()
-    for key, value in current.items():
-        st.query_params[key] = value
+    # Solo eliminamos parámetros de navegación; los filtros se preservan en la URL
+    for key in list(st.query_params.keys()):
+        if key in ("action", "sel_id"):
+            del st.query_params[key]
     st.rerun()
 
 
@@ -579,7 +576,7 @@ def render_category_chart(df: pd.DataFrame) -> None:
 # -----------------------------------------------------------------------------
 
 def render_back_link() -> None:
-    current = dict(st.query_params)
+    current = {k: v for k, v in st.query_params.items()}
     current.pop("action", None)
     current.pop("sel_id", None)
     back_url = "?" + urlencode(current) if current else "?"
@@ -1067,7 +1064,7 @@ def render_dashboard(df: pd.DataFrame) -> None:
         st.markdown("</div>", unsafe_allow_html=True)
 
         filter_default = date_from_filter(str(st.query_params.get("fecha_date", "")))
-        selected_date = st.date_input("Filtrar por check-in", value=(filter_default or datetime.now()).date(), key="arrival_date")
+        selected_date = st.date_input("Filtrar por check-in", value=(filter_default or datetime.now()).date())
         date_link = url_with(fecha_date=selected_date.strftime("%Y-%m-%d"))
         st.markdown(
             f'<a class="action-link" href="{date_link}" style="background:#0891B2;margin-top:6px">APLICAR FECHA</a>',
